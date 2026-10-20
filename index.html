@@ -208,11 +208,26 @@ textarea{min-height:90px;font-size:13px}
 .manual{display:flex;gap:8px}
 .manual input{flex:1;min-width:0}
 .found{display:flex;gap:12px;align-items:center}
-.found .thumb{width:84px;height:84px;flex:none}
+.found .thumb{width:96px;height:96px;flex:none;font-size:28px}
 .found .t{min-width:0;display:flex;flex-direction:column;gap:3px}
 .found .nm{font-weight:800;font-size:17px;overflow-wrap:anywhere}
 .found .br{font-size:13px;color:var(--muted)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:max(14px,env(safe-area-inset-top,0px));z-index:400;background:var(--fg);color:var(--panel);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;max-width:calc(100% - 32px);box-shadow:0 6px 18px rgba(0,0,0,.2)}
+.btn.sm{padding:6px 10px;font-size:13px}
+.cropwrap{position:relative;align-self:center;max-width:100%;touch-action:none;user-select:none;-webkit-user-select:none;border-radius:12px;overflow:hidden;background:#000;line-height:0}
+.cropwrap img{display:block;max-width:100%;max-height:56vh;width:auto;height:auto;pointer-events:none;-webkit-touch-callout:none}
+#cropRect{position:absolute;border:2px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,.55);cursor:move;touch-action:none}
+#cropRect i{position:absolute;width:28px;height:28px;border:4px solid #fff}
+#cropRect i[data-h=nw]{left:-5px;top:-5px;border-right:0;border-bottom:0;cursor:nwse-resize}
+#cropRect i[data-h=ne]{right:-5px;top:-5px;border-left:0;border-bottom:0;cursor:nesw-resize}
+#cropRect i[data-h=sw]{left:-5px;bottom:-5px;border-right:0;border-top:0;cursor:nesw-resize}
+#cropRect i[data-h=se]{right:-5px;bottom:-5px;border-left:0;border-top:0;cursor:nwse-resize}
+#lblText{min-height:130px;font-family:var(--display);font-size:15px}
+.lblhow{line-height:1.5}
+.lblhow b{color:var(--fg)}
+.preview .miss b{color:var(--muted)}
+.flash{animation:flash 1.2s}
+@keyframes flash{0%{background:var(--okbg)}100%{background:var(--bg)}}
 input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-visible,label.filebtn:focus-within{outline:2px solid var(--prot);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -410,13 +425,24 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="grab"><i></i></div>
     <div class="sh"><b id="pfTitle">Новый продукт</b><button class="x" data-close type="button" aria-label="Закрыть">×</button></div>
     <div class="sbody">
-      <div class="found" id="pfHead" hidden>
+      <div class="found" id="pfHead">
         <div class="thumb" id="pfThumb"></div>
-        <div class="t"><div class="nm" id="pfHName"></div><div class="br" id="pfHBrand"></div><div class="br num" id="pfHCode"></div></div>
+        <div class="t">
+          <div class="nm" id="pfHName"></div><div class="br" id="pfHBrand"></div><div class="br num" id="pfHCode"></div>
+          <div class="acts" style="margin-top:4px">
+            <label class="btn filebtn sm">Фото<input type="file" id="pfPhotoIn" accept="image/*"></label>
+            <button class="btn sm" type="button" id="pfPhotoEdit" hidden>Обрезать</button>
+            <button class="btn sm" type="button" id="pfPhotoDel" hidden>Убрать</button>
+          </div>
+        </div>
       </div>
       <div class="status" id="pfNote" hidden></div>
       <form class="f" id="pf">
         <label class="full">Название<input class="txt" id="pf-name" required></label>
+        <div class="full acts">
+          <button class="btn" type="button" id="pfLabel">Сканировать этикетку (ккал и БЖУ)</button>
+          <button class="btn" type="button" id="pfFromBase" hidden>Обновить из базы</button>
+        </div>
         <label>ккал на 100 г<input id="pf-k" type="number" step="any" inputmode="decimal" required></label>
         <label>Белок на 100 г<input id="pf-p" type="number" step="any" inputmode="decimal" required></label>
         <label>Жиры на 100 г<input id="pf-f" type="number" step="any" inputmode="decimal"></label>
@@ -432,6 +458,50 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
           <button class="btn del" type="button" id="pf-del" hidden>Удалить</button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: crop photo -->
+<div class="sheet" id="sh-crop" data-parent="sh-prod" hidden>
+  <div class="scrim"></div>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+    <div class="grab"><i></i></div>
+    <div class="sh"><div class="dnav"><button class="back" data-back="sh-prod" type="button" aria-label="Назад">‹</button><b id="cropTitle">Фото продукта</b></div><button class="x" data-close type="button" aria-label="Закрыть">×</button></div>
+    <div class="sbody">
+      <div class="cropwrap" id="cropWrap">
+        <img id="cropImg" alt="Фото продукта">
+        <div id="cropRect"><i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i></div>
+      </div>
+      <div class="hint" id="cropHint">Рамка выставлена по контуру. Если нужно, подвинь её или потяни за углы.</div>
+      <div class="acts">
+        <button class="btn" type="button" id="cropAuto">По контуру</button>
+        <button class="btn" type="button" id="cropAll">Всё фото</button>
+        <button class="btn go" type="button" id="cropDone" style="margin-left:auto">Готово</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: scan nutrition label -->
+<div class="sheet" id="sh-label" data-parent="sh-prod" hidden>
+  <div class="scrim"></div>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="lblTitle">
+    <div class="grab"><i></i></div>
+    <div class="sh"><div class="dnav"><button class="back" data-back="sh-prod" type="button" aria-label="Назад">‹</button><b id="lblTitle">Этикетка</b></div><button class="x" data-close type="button" aria-label="Закрыть">×</button></div>
+    <div class="sbody">
+      <textarea id="lblText" placeholder="Сюда попадёт текст таблицы Nährwerte"></textarea>
+      <div class="hint lblhow">
+        <b>На iPhone:</b> нажми на поле выше, затем нажми ещё раз и выбери <b>«Сканировать текст»</b> (значок рамки со строками). Наведи камеру на таблицу Nährwerte и нажми <b>«Вставить»</b>.<br>
+        <b>Или:</b> сфотографируй этикетку, открой фото, нажми и удерживай на тексте → «Выбрать все» → «Скопировать» и вставь сюда.<br>
+        <b>На ПК:</b> вставь скопированный текст этикетки.
+      </div>
+      <div class="preview" id="lblPv"></div>
+      <div class="status" id="lblNote"></div>
+      <div class="acts">
+        <button class="btn" type="button" id="lblClear">Очистить</button>
+        <button class="btn go" type="button" id="lblApply" style="margin-left:auto">Подставить значения</button>
+      </div>
     </div>
   </div>
 </div>
@@ -508,7 +578,9 @@ function openSheet(id){
   openSheetEl=s;
 }
 function closeSheet(instant){
-  const s=openSheetEl;if(!s)return;openSheetEl=null;
+  const s=openSheetEl;if(!s)return;
+  if(!instant&&s.dataset.parent){openSheet(s.dataset.parent);return}
+  openSheetEl=null;
   if(s.id==="sh-scan")stopScan();
   s.classList.remove("open");const box=s.querySelector(".box");box.style.transform="";
   const done=()=>{s.hidden=true;if(!openSheetEl)document.body.classList.remove("locked")};
@@ -517,6 +589,7 @@ function closeSheet(instant){
 document.querySelectorAll(".sheet").forEach(s=>{
   s.querySelector(".scrim").onclick=()=>closeSheet();
   s.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeSheet());
+  s.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>openSheet(b.dataset.back));
   // свайп вниз — закрыть
   const box=s.querySelector(".box");let y0=null,dy=0;
   s.querySelectorAll(".grab,.sh").forEach(h=>{
@@ -682,11 +755,15 @@ function readUnits(box){
   const u=[...box.children].map(r=>{const [a,b]=r.querySelectorAll("input");return [a.value.trim(),num(b.value)]}).filter(u=>u[0]&&u[1]>0);
   u.push(["г",1]);return u;
 }
+let pfPhoto={};
 function setHead(p){
-  const has=!!(p&&(p.img||p.imgS||p.barcode));$("pfHead").hidden=!has;if(!has)return;
-  $("pfThumb").outerHTML=thumbHTML(p).replace('class="thumb"','class="thumb" id="pfThumb"');
-  $("pfHName").textContent=p.name||"Новый продукт";$("pfHBrand").textContent=p.brand||"";$("pfHCode").textContent=p.barcode||"";
+  const name=$("pf-name").value||p?.name||"",has=!!pfPhoto.img||!!pfPhoto.imgS;
+  $("pfThumb").outerHTML=thumbHTML({name:name||"?",img:pfPhoto.img,imgS:pfPhoto.imgS}).replace('class="thumb"','class="thumb" id="pfThumb"');
+  $("pfHName").textContent=name||"Новый продукт";$("pfHBrand").textContent=p?.brand||"";$("pfHCode").textContent=$("pf-bc").value||p?.barcode||"";
+  $("pfPhotoDel").hidden=!has;$("pfPhotoEdit").hidden=!cropSrc;
+  $("pfFromBase").hidden=!validCode($("pf-bc").value.replace(/\D/g,""));
 }
+let pfBrand;
 function fillForm(p){
   $("pf-name").value=p?.name||"";$("pf-k").value=p&&p.k>=0?r1(p.k):"";$("pf-p").value=p&&p.p>=0?r1(p.p):"";
   $("pf-f").value=p&&p.f>=0?r1(p.f):"";$("pf-c").value=p&&p.c>=0?r1(p.c):"";$("pf-bc").value=p?.barcode||"";
@@ -695,13 +772,16 @@ function fillForm(p){
   if(!$("pf-units").children.length)unitRow($("pf-units"));
 }
 function openProduct(p){
-  editing=p?p.id:null;pendingScan=null;afterSave=null;
+  editing=p?p.id:null;pendingScan=null;afterSave=null;cropSrc=null;
+  pfPhoto={img:p?.img,imgS:p?.imgS};pfBrand=p?.brand;
   $("pfTitle").textContent=p?"Изменить продукт":"Новый продукт";
   $("pf-save").textContent=p?"Сохранить изменения":"Сохранить";
-  $("pfNote").hidden=true;setHead(p);fillForm(p);
+  $("pfNote").hidden=true;fillForm(p);setHead(p);
   const del=$("pf-del");del.hidden=!p;del.classList.remove("armed");del.textContent="Удалить";
   openSheet("sh-prod");
 }
+$("pf-name").oninput=()=>{$("pfHName").textContent=$("pf-name").value||"Новый продукт";if(!pfPhoto.img&&!pfPhoto.imgS)setHead({brand:pfBrand})};
+$("pf-bc").oninput=()=>setHead({brand:pfBrand});
 $("pf-addu").onclick=()=>unitRow($("pf-units"));
 $("pf-del").onclick=()=>{
   const b=$("pf-del");
@@ -709,13 +789,168 @@ $("pf-del").onclick=()=>{
   bury(editing);prods=prods.filter(p=>p.id!==editing);save();closeSheet();renderProducts();toast("Продукт удалён")};
 $("pf").onsubmit=e=>{e.preventDefault();
   const data={name:$("pf-name").value.trim(),k:num($("pf-k").value),p:num($("pf-p").value),f:num($("pf-f").value)||0,c:num($("pf-c").value)||0,
-    barcode:$("pf-bc").value.replace(/\D/g,"")||undefined,units:readUnits($("pf-units"))};
+    barcode:$("pf-bc").value.replace(/\D/g,"")||undefined,units:readUnits($("pf-units")),
+    img:pfPhoto.img||undefined,imgS:pfPhoto.imgS||undefined,brand:pfBrand||undefined};
   let p;
   if(editing){p=prods.find(x=>x.id===editing);Object.assign(p,data);touch(p)}
-  else{p=touch({id:"c"+Date.now(),...(pendingScan||{}),...data});prods.unshift(p)}
+  else{p=touch({id:"c"+Date.now(),...data});prods.unshift(p)}
   save();renderProducts();
-  const next=afterSave;afterSave=null;pendingScan=null;
+  const next=afterSave;afterSave=null;pendingScan=null;cropSrc=null;
   if(next==="amount"){openSheet("sh-add");showAmount(p.id)}else{closeSheet();toast("Продукт сохранён")}
+};
+
+/* ---------- own photo with auto-crop ---------- */
+let cropSrc=null,cropBox=null;
+function autoCropBox(img){
+  const W0=img.naturalWidth,H0=img.naturalHeight,S=180,sc=S/Math.max(W0,H0);
+  const w=Math.max(1,Math.round(W0*sc)),h=Math.max(1,Math.round(H0*sc));
+  const cv=document.createElement("canvas");cv.width=w;cv.height=h;const cx=cv.getContext("2d",{willReadFrequently:true});
+  cx.drawImage(img,0,0,w,h);const d=cx.getImageData(0,0,w,h).data;
+  const bw=Math.max(2,Math.round(Math.min(w,h)*0.04)),edge=(x,y)=>x<bw||y<bw||x>=w-bw||y>=h-bw;
+  const R=[],G=[],B=[];
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(edge(x,y)){const i=(y*w+x)*4;R.push(d[i]);G.push(d[i+1]);B.push(d[i+2])}
+  const med=a=>{a.sort((p,q)=>p-q);return a[a.length>>1]},br=med(R),bg=med(G),bb=med(B);
+  const dist=new Float32Array(w*h);let bs=0,bn=0;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4,v=Math.hypot(d[i]-br,d[i+1]-bg,d[i+2]-bb);dist[y*w+x]=v;if(edge(x,y)){bs+=v;bn++}}
+  const lum=i=>0.3*d[i]+0.59*d[i+1]+0.11*d[i+2],T=Math.max(34,(bs/bn)*2.2);
+  let m=new Uint8Array(w*h);
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x,gx=lum((i+1)*4)-lum((i-1)*4),gy=lum((i+w)*4)-lum((i-w)*4);m[i]=(dist[i]>T||Math.hypot(gx,gy)>70)?1:0}
+  const o=new Uint8Array(w*h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){if(!m[y*w+x])continue;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const X=x+dx,Y=y+dy;if(X>=0&&Y>=0&&X<w&&Y<h)o[Y*w+X]=1}}
+  m=o;
+  const lab=new Int32Array(w*h).fill(-1),comps=[];
+  for(let s0=0;s0<w*h;s0++){if(!m[s0]||lab[s0]>=0)continue;const id=comps.length,st=[s0];lab[s0]=id;let n=0,cn=0,x0=w,y0=h,x1=0,y1=0;
+    while(st.length){const i=st.pop(),x=i%w,y=(i/w)|0;n++;if(x>w*.25&&x<w*.75&&y>h*.25&&y<h*.75)cn++;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;
+      if(x>0&&m[i-1]&&lab[i-1]<0){lab[i-1]=id;st.push(i-1)}if(x<w-1&&m[i+1]&&lab[i+1]<0){lab[i+1]=id;st.push(i+1)}
+      if(y>0&&m[i-w]&&lab[i-w]<0){lab[i-w]=id;st.push(i-w)}if(y<h-1&&m[i+w]&&lab[i+w]<0){lab[i+w]=id;st.push(i+w)}}
+    comps.push({n,cn,x0,y0,x1,y1})}
+  if(!comps.length)return null;
+  comps.sort((a,b)=>(b.cn*3+b.n)-(a.cn*3+a.n));const c=comps[0];if(c.n<w*h*0.03)return null;
+  let {x0,y0,x1,y1}=c;
+  for(const q of comps.slice(1)){if(q.n<c.n*0.08||q.x1<x0||q.x0>x1||q.y1<y0||q.y0>y1)continue;x0=Math.min(x0,q.x0);y0=Math.min(y0,q.y0);x1=Math.max(x1,q.x1);y1=Math.max(y1,q.y1)}
+  const pad=Math.round(Math.max(x1-x0,y1-y0)*0.04);
+  x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);x1=Math.min(w-1,x1+pad);y1=Math.min(h-1,y1+pad);
+  if((x1-x0)*(y1-y0)>w*h*0.92)return null;
+  return {x:x0/sc,y:y0/sc,w:(x1-x0+1)/sc,h:(y1-y0+1)/sc};
+}
+const fullBox=img=>({x:0,y:0,w:img.naturalWidth,h:img.naturalHeight});
+function drawCrop(){
+  const im=$("cropImg"),s=im.clientWidth/cropSrc.naturalWidth,r=$("cropRect");
+  r.style.left=cropBox.x*s+"px";r.style.top=cropBox.y*s+"px";r.style.width=cropBox.w*s+"px";r.style.height=cropBox.h*s+"px";
+}
+async function openCrop(file){
+  const url=URL.createObjectURL(file),img=new Image();img.src=url;
+  try{await img.decode()}catch(e){toast("Не получилось открыть фото");return}
+  cropSrc=img;$("cropImg").src=url;
+  const auto=autoCropBox(img);cropBox=auto||fullBox(img);
+  $("cropHint").textContent=auto?"Рамка выставлена по контуру. Если нужно, подвинь её или потяни за углы.":"Контур не нашёлся автоматически: выставь рамку вручную.";
+  openSheet("sh-crop");
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  if(!$("cropImg").complete)await new Promise(r=>$("cropImg").onload=r);
+  drawCrop();
+}
+$("pfPhotoIn").onchange=e=>{const f=e.target.files[0];e.target.value="";if(f)openCrop(f)};
+$("pfPhotoEdit").onclick=async()=>{if(!cropSrc)return;openSheet("sh-crop");await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));drawCrop()};
+$("pfPhotoDel").onclick=()=>{pfPhoto={};cropSrc=null;setHead({brand:pfBrand})};
+$("cropAuto").onclick=()=>{const a=autoCropBox(cropSrc);if(a){cropBox=a;drawCrop()}else toast("Контур не нашёлся — выставь рамку вручную")};
+$("cropAll").onclick=()=>{cropBox=fullBox(cropSrc);drawCrop()};
+$("cropDone").onclick=()=>{
+  const b=cropBox,s=Math.min(1,320/Math.max(b.w,b.h)),cv=document.createElement("canvas");
+  cv.width=Math.max(1,Math.round(b.w*s));cv.height=Math.max(1,Math.round(b.h*s));
+  const cx=cv.getContext("2d");cx.imageSmoothingQuality="high";cx.fillStyle="#fff";cx.fillRect(0,0,cv.width,cv.height);
+  cx.drawImage(cropSrc,b.x,b.y,b.w,b.h,0,0,cv.width,cv.height);
+  const url=cv.toDataURL("image/jpeg",0.78);pfPhoto={img:url,imgS:url};
+  openSheet("sh-prod");setHead({brand:pfBrand});
+};
+(()=>{ // перетаскивание рамки и углов
+  const r=$("cropRect");let st=null;
+  r.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();const s=$("cropImg").clientWidth/cropSrc.naturalWidth;
+    st={h:e.target.dataset.h||"move",x:e.clientX,y:e.clientY,b:{...cropBox},s};r.setPointerCapture(e.pointerId)});
+  r.addEventListener("pointermove",e=>{if(!st)return;const W=cropSrc.naturalWidth,H=cropSrc.naturalHeight,dx=(e.clientX-st.x)/st.s,dy=(e.clientY-st.y)/st.s,b={...st.b},min=Math.min(W,H)*0.08;
+    if(st.h==="move"){b.x=Math.min(Math.max(0,b.x+dx),W-b.w);b.y=Math.min(Math.max(0,b.y+dy),H-b.h)}
+    else{let x0=b.x,y0=b.y,x1=b.x+b.w,y1=b.y+b.h;
+      if(st.h.includes("w"))x0=Math.min(Math.max(0,x0+dx),x1-min);if(st.h.includes("e"))x1=Math.max(Math.min(W,x1+dx),x0+min);
+      if(st.h.includes("n"))y0=Math.min(Math.max(0,y0+dy),y1-min);if(st.h.includes("s"))y1=Math.max(Math.min(H,y1+dy),y0+min);
+      b.x=x0;b.y=y0;b.w=x1-x0;b.h=y1-y0}
+    cropBox=b;drawCrop()});
+  const end=()=>{st=null};r.addEventListener("pointerup",end);r.addEventListener("pointercancel",end);
+  window.addEventListener("resize",()=>{if(cropSrc&&openSheetEl&&openSheetEl.id==="sh-crop")drawCrop()});
+})();
+
+/* ---------- nutrition label → values ---------- */
+function parseLabel(raw){
+  const KEYS=[["k",/brennwert|energie|energy|энерг|калорийн/i],["sf",/gesätt|gesatt|saturat|fettsäur|fettsaur|насыщ/i],["f",/\bfett\b|\bfat\b|жир/i],
+    ["c",/kohlenhydr|carbohydr|углевод/i],["su",/zucker|sugar|сахар/i],["fi",/ballast|fibre|fiber|клетчат/i],["p",/eiwei|protein|белк|белок/i],["sa",/\bsalz\b|\bsalt\b|соль/i]];
+  const norm=s=>s.replace(/[|\[\]{}]/g," ").replace(/(\d)\s*,\s*(\d)/g,"$1.$2").replace(/\s+/g," ").trim();
+  const lines=String(raw||"").split(/\r?\n/).map(norm).flatMap(l=>l.split(/[;,:]\s+(?=[^\d\s])|\.\s+(?=[^\d\s])/)).map(x=>x.trim()).filter(Boolean);
+  const kindOf=l=>{for(const [k,re] of KEYS)if(re.test(l))return k;return null};
+  const energyFrom=s=>{let m=s.match(/(\d+(?:\.\d+)?)\s*(?:k\s*cal|kca1|keal|ккал)/i);if(m)return +m[1];
+    const m1=s.match(/(\d+(?:\.\d+)?)\s*(?:kj|кдж)\b/i),m2=s.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
+    if(m2){const a=+m2[1],b=+m2[2];return a>b?b:a}if(m1)return Math.round(+m1[1]/4.184);return null};
+  const kjFrom=s=>{const m=s.match(/(\d+(?:\.\d+)?)\s*(?:kj|кдж)/i);if(m)return +m[1];const m2=s.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);return m2?Math.max(+m2[1],+m2[2]):null};
+  const firstNum=s=>{const m=s.match(/(?:^|[^\d.])(<?\s*\d+(?:\.\d+)?)/);return m?parseFloat(m[1].replace(/[<\s]/g,"")):null};
+  const out={},noVal=[];
+  for(const l of lines){const k=kindOf(l);if(!k)continue;const re=KEYS.find(x=>x[0]===k)[1],rest=l.slice(Math.max(0,l.search(re)));
+    if(k==="k"){const e=energyFrom(l);if(e!=null&&out.k==null){out.k=e;const kj=kjFrom(l);if(kj&&Math.abs(kj/4.184-e)/e>0.12)out.k=Math.round(kj/4.184)}else if(e==null)noVal.push(k);continue}
+    const v=firstNum(rest.replace(/^[^\d<]*/,"x "));if(v!=null){if(out[k]==null)out[k]=v}else noVal.push(k)}
+  if(noVal.length){ // Live Text часто отдаёт подписи и числа отдельными столбцами
+    const vals=lines.filter(l=>!kindOf(l)&&/\d/.test(l)&&/^[<\d\s.,/kjcalgmкдж~-]+$/i.test(l.replace(/\s*(g|г|mg|мг)\b/gi," g ")));let vi=0;
+    for(const k of lines.map(kindOf).filter(k=>k&&noVal.includes(k))){if(vi>=vals.length)break;
+      if(k==="k"){const idx=vals.findIndex((v,i)=>i>=vi&&/kj|kcal|ккал|кдж|\//i.test(v));if(idx>=0){if(out.k==null)out.k=energyFrom(vals[idx]);vi=idx+1}continue}
+      while(vi<vals.length&&/kj|kcal|ккал/i.test(vals[vi]))vi++;if(vi<vals.length){const v=firstNum(vals[vi]);if(out[k]==null&&v!=null)out[k]=v;vi++}}}
+  let {k,f,c,p}=out;
+  const trim=v=>{if(v==null)return v;const m=String(v).match(/^(\d+)\.(\d)(\d)$/);return m&&/[0689]/.test(m[3])?+(m[1]+"."+m[2]):v};
+  f=trim(f);c=trim(c);p=trim(p);
+  if(k>0&&[f,c,p].some(v=>v!=null)){const alts=v=>v==null?[null]:(Number.isInteger(v)&&v>=10?[v,v/10]:[v]);let best=null;
+    for(const F of alts(f))for(const C of alts(c))for(const P of alts(p)){const err=Math.abs(9*(F||0)+4*(C||0)+4*(P||0)-k)/k,pen=[F!==f,C!==c,P!==p].filter(Boolean).length*0.1;if(!best||err+pen<best.s)best={s:err+pen,F,C,P}}
+    f=best.F;c=best.C;p=best.P}
+  return {k:k??null,f:f??null,c:c??null,p:p??null};
+}
+let lblRes=null;
+function renderLabel(){
+  const t=$("lblText").value;lblRes=t.trim()?parseLabel(t):null;const r=lblRes||{};
+  const cell=(key,cls,name)=>`<div class="${cls}${r[key]==null?" miss":""}"><b>${r[key]==null?"—":fmt(r[key])}</b><span>${name}</span></div>`;
+  $("lblPv").innerHTML=cell("k","k","ккал")+cell("p","p","белок")+cell("f","","жиры")+cell("c","","углев.");
+  const n=["k","p","f","c"].filter(x=>r[x]!=null).length;
+  $("lblNote").className="status"+(t.trim()&&n<4?" err":"");
+  $("lblNote").textContent=!t.trim()?"":n===4?"Всё распознано. Сверь с этикеткой и подставь.":n?"Распознано не всё: недостающее впишешь вручную.":"Не нашёл значений. Нужна таблица с «Brennwert», «Fett», «Kohlenhydrate», «Eiweiß».";
+  $("lblApply").disabled=!n;
+}
+$("lblText").oninput=renderLabel;
+$("lblClear").onclick=()=>{$("lblText").value="";renderLabel();$("lblText").focus()};
+$("pfLabel").onclick=()=>{$("lblText").value="";renderLabel();openSheet("sh-label")};
+$("lblApply").onclick=()=>{const r=lblRes;if(!r)return;
+  [["k","pf-k"],["p","pf-p"],["f","pf-f"],["c","pf-c"]].forEach(([k,id])=>{if(r[k]!=null){const el=$(id);el.value=r1(r[k]);el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash")}});
+  openSheet("sh-prod");toast("Значения подставлены — проверь их")};
+
+/* ---------- Open Food Facts ---------- */
+async function fetchOFF(code){
+  try{
+    const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=code,product_name,product_name_de,product_name_ru,generic_name,brands,quantity,product_quantity,serving_quantity,image_front_url,image_front_small_url,image_url,image_small_url,nutriments`);
+    const j=await r.json();return {prod:j&&j.status===1&&j.product?j.product:null,netErr:false};
+  }catch(e){return {prod:null,netErr:true}}
+}
+function draftFrom(code,p){
+  const n=(p&&p.nutriments)||{};
+  let k=num(n["energy-kcal_100g"]);if(!(k>=0))k=num(n["energy_100g"])/4.184;
+  const v=x=>{const y=num(x);return y>=0?y:undefined};
+  const name=p?(p.product_name_ru||p.product_name_de||p.product_name||p.generic_name||""):"";
+  const brand=p&&p.brands?String(p.brands).split(",")[0].trim():"";
+  const img=p?(p.image_front_url||p.image_url||""):"",imgS=p?(p.image_front_small_url||p.image_small_url||img):"";
+  const units=[];const sq=num(p&&p.serving_quantity),pq=num(p&&p.product_quantity);
+  if(sq>0)units.push([`порция ${fmt(sq)} г`,r1(sq)]);if(pq>0&&pq!==sq)units.push([`упаковка ${fmt(pq)} г`,r1(pq)]);
+  return {name,brand:brand||undefined,barcode:code,img:img||undefined,imgS:imgS||undefined,k:k>=0?k:undefined,p:v(n["proteins_100g"]),f:v(n["fat_100g"]),c:v(n["carbohydrates_100g"]),units};
+}
+$("pfFromBase").onclick=async()=>{
+  const code=$("pf-bc").value.replace(/\D/g,"");const b=$("pfFromBase");b.disabled=true;b.textContent="Ищу…";
+  const {prod,netErr}=await fetchOFF(code);b.disabled=false;b.textContent="Обновить из базы";
+  if(!prod){toast(netErr?"Нет связи с базой":"Этого продукта нет в базе");return}
+  const d=draftFrom(code,prod);
+  if(d.img){pfPhoto={img:d.img,imgS:d.imgS};cropSrc=null}
+  if(d.brand)pfBrand=d.brand;
+  [["k","pf-k"],["p","pf-p"],["f","pf-f"],["c","pf-c"]].forEach(([k,id])=>{if(d[k]>=0)$(id).value=r1(d[k])});
+  if(!$("pf-name").value.trim()&&d.name)$("pf-name").value=d.name;
+  setHead({brand:pfBrand});toast("Обновлено из базы — проверь значения");
 };
 
 /* ---------- barcode scanner + Open Food Facts ---------- */
@@ -771,34 +1006,22 @@ async function lookup(code){
     return;
   }
   setStatus(`Ищу ${code} в базе…`);
-  let prod=null,netErr=false;
-  try{
-    const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=code,product_name,product_name_de,product_name_ru,generic_name,brands,quantity,product_quantity,serving_quantity,image_front_url,image_front_small_url,image_url,image_small_url,nutriments`);
-    const j=await r.json();if(j&&j.status===1&&j.product)prod=j.product;
-  }catch(e){netErr=true}
+  const {prod,netErr}=await fetchOFF(code);
   showFound(code,prod,netErr);
 }
 function showFound(code,p,netErr){
-  const n=(p&&p.nutriments)||{};
-  let k=num(n["energy-kcal_100g"]);if(!(k>=0))k=num(n["energy_100g"])/4.184;
-  const v=x=>{const y=num(x);return y>=0?y:undefined};
-  const name=p?(p.product_name_ru||p.product_name_de||p.product_name||p.generic_name||""):"";
-  const brand=p&&p.brands?String(p.brands).split(",")[0].trim():"";
-  const img=p?(p.image_front_url||p.image_url||""):"",imgS=p?(p.image_front_small_url||p.image_small_url||img):"";
-  const units=[];const sq=num(p&&p.serving_quantity),pq=num(p&&p.product_quantity);
-  if(sq>0)units.push([`порция ${fmt(sq)} г`,r1(sq)]);if(pq>0&&pq!==sq)units.push([`упаковка ${fmt(pq)} г`,r1(pq)]);
-  const draft={name,brand:brand||undefined,barcode:code,img:img||undefined,imgS:imgS||undefined,k:k>=0?k:undefined,p:v(n["proteins_100g"]),f:v(n["fat_100g"]),c:v(n["carbohydrates_100g"]),units};
-  editing=null;pendingScan={brand:draft.brand,img:draft.img,imgS:draft.imgS};
+  const draft=draftFrom(code,p);
+  editing=null;cropSrc=null;pfPhoto={img:draft.img,imgS:draft.imgS};pfBrand=draft.brand;
   afterSave=scanFrom==="add"?"amount":null;
   $("pfTitle").textContent=p?"Найдено в базе":"Новый продукт";
   $("pf-save").textContent=scanFrom==="add"?"Сохранить и добавить":"Сохранить в продукты";
   $("pf-del").hidden=true;
-  setHead(draft);fillForm(draft);
+  fillForm(draft);setHead(draft);
   const missing=p&&!(draft.k>=0&&draft.p>=0);
   const note=$("pfNote");note.hidden=false;note.className="status"+((!p||missing)?" err":"");
-  note.textContent=netErr?"Нет связи с базой. Заполни данные с упаковки вручную.":
-    !p?"Этого продукта нет в базе Open Food Facts. Заполни значения с упаковки — он сохранится со штрихкодом.":
-    missing?"В базе неполные данные. Дополни значения с упаковки.":"Проверь значения с упаковкой и сохрани.";
+  note.textContent=netErr?"Нет связи с базой. Заполни данные с упаковки или отсканируй этикетку.":
+    !p?"Этого продукта нет в базе Open Food Facts. Отсканируй этикетку или впиши значения — он сохранится со штрихкодом.":
+    missing?"В базе неполные данные. Дополни их — проще всего через «Сканировать этикетку».":"Проверь значения с упаковкой и сохрани.";
   openSheet("sh-prod");
 }
 
