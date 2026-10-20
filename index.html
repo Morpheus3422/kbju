@@ -293,6 +293,25 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
         <label>Белок, г<input id="goalP" type="number" step="any" inputmode="decimal"></label>
       </div>
     </div>
+    <div class="panel" id="syncPanel">
+      <div class="mh"><h2>Синхронизация</h2><span class="hint" id="syncState"></span></div>
+      <div id="syncOff" class="view" style="gap:10px">
+        <div class="hint">Записи и продукты будут одинаковыми на телефоне и на ПК. Данные хранятся в приватном gist в твоём GitHub. Ключ нужно вставить один раз на каждом устройстве.</div>
+        <ol class="hint" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+          <li>Открой <a href="https://github.com/settings/tokens/new?scopes=gist&description=kbju" target="_blank" rel="noopener" style="color:var(--prot);font-weight:700">создание ключа на GitHub</a> (галочка gist уже стоит).</li>
+          <li>В Expiration выбери <b>No expiration</b>, внизу нажми <b>Generate token</b>.</li>
+          <li>Скопируй ключ (начинается с ghp_) и вставь сюда. Тот же ключ подойдёт для второго устройства.</li>
+        </ol>
+        <div class="manual">
+          <input id="syncToken" type="password" autocomplete="off" placeholder="ghp_…" aria-label="Ключ GitHub">
+          <button class="btn go" id="syncConnect" type="button">Подключить</button>
+        </div>
+      </div>
+      <div id="syncOn" class="acts" hidden>
+        <button class="btn go" id="syncNowBtn" type="button">Синхронизировать сейчас</button>
+        <button class="btn del" id="syncOffBtn" type="button">Отключить</button>
+      </div>
+    </div>
     <div class="panel">
       <h2>Данные</h2>
       <div class="hint">Всё хранится на этом устройстве. Сохраняй копию, чтобы перенести данные на другое устройство или не потерять их.</div>
@@ -443,17 +462,23 @@ function toast(t){document.querySelectorAll(".toast").forEach(x=>x.remove());con
 const thumbHTML=p=>(p.imgS||p.img)?`<img class="thumb" src="${esc(p.imgS||p.img)}" alt="" loading="lazy">`:`<div class="thumb">${esc((p.name||"?").trim()[0]||"?").toUpperCase()}</div>`;
 
 /* ---------- storage ---------- */
-let prods=null,hist={},GOAL={k:2350,p:140};
+// У каждой записи и продукта есть t — время последнего изменения; удалённое помнится в tomb (id → время), чтобы удаление доходило до других устройств
+let prods=null,hist={},GOAL={k:2350,p:140},tomb={};
+try{tomb=JSON.parse(localStorage.getItem("kbju-tomb"))||{}}catch(e){}
 try{prods=JSON.parse(localStorage.getItem("kbju-products"))}catch(e){}
-if(!Array.isArray(prods)||!prods.length)prods=BASE.map(p=>({...p,units:p.units.map(u=>[...u])}));
+if(!Array.isArray(prods))prods=BASE.map(p=>({...p,units:p.units.map(u=>[...u])})).filter(p=>!tomb[p.id]);
 try{hist=JSON.parse(localStorage.getItem("kbju-hist"))||{}}catch(e){}
 try{const g=JSON.parse(localStorage.getItem("kbju-goals"));if(g&&g.k>0&&g.p>0)GOAL=g}catch(e){}
-function normalize(){Object.values(hist).forEach(arr=>arr.forEach(e=>{if(!e.id)e.id=uid();if(!e.meal)e.meal="u"}))}
+function normalize(){Object.values(hist).forEach(arr=>arr.forEach(e=>{if(!e.id)e.id=uid();if(!e.meal)e.meal="u";if(!e.at)e.at=e.t||0}))}
 normalize();
+const now=()=>Date.now();
+const touch=o=>{o.t=now();return o};
+const bury=id=>{tomb[id]=now()};
 function save(){try{
   Object.keys(hist).forEach(k=>{if(!hist[k].length)delete hist[k]});
   localStorage.setItem("kbju-hist",JSON.stringify(hist));localStorage.setItem("kbju-products",JSON.stringify(prods));
-  localStorage.setItem("kbju-goals",JSON.stringify(GOAL))}catch(e){toast("Не удалось сохранить: память браузера недоступна")}}
+  localStorage.setItem("kbju-goals",JSON.stringify(GOAL));localStorage.setItem("kbju-tomb",JSON.stringify(tomb))}catch(e){toast("Не удалось сохранить: память браузера недоступна")}
+  if(typeof scheduleSync==="function")scheduleSync()}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 
 let curDate=todayKey(),sel=null,editing=null,mealSel="u",tab="today";
@@ -556,9 +581,9 @@ function preview(){
 }
 $("amt").oninput=preview;
 $("unit").onchange=()=>{const u=cur().units[$("unit").value];$("amt").value=u[1]===1?100:1;renderFrac();preview()};
-$("addBtn").onclick=()=>{const c=calc();if(!c)return;dayLog().push({id:uid(),meal:mealSel,name:cur().name,...c});save();renderDay();closeSheet();toast(`Добавлено: ${fmt(c.k)} ккал`)};
+$("addBtn").onclick=()=>{const c=calc();if(!c)return;dayLog().push({id:uid(),meal:mealSel,name:cur().name,...c,at:now(),t:now()});save();renderDay();closeSheet();toast(`Добавлено: ${fmt(c.k)} ккал`)};
 $("mf").onsubmit=e=>{e.preventDefault();const k=num($("mf-k").value)||0,p=num($("mf-p").value)||0;if(!k&&!p)return;
-  dayLog().push({id:uid(),meal:mealSel,name:"Вручную",label:"",k,p,f:0,c:0});$("mf").reset();save();renderDay();closeSheet();toast("Добавлено")};
+  dayLog().push({id:uid(),meal:mealSel,name:"Вручную",label:"",k,p,f:0,c:0,at:now(),t:now()});$("mf").reset();save();renderDay();closeSheet();toast("Добавлено")};
 $("fabAdd").onclick=()=>openAdd();
 
 /* ---------- today ---------- */
@@ -589,7 +614,7 @@ function renderMeals(){
     const pl=box.querySelector(".plus");if(pl)pl.onclick=()=>openAdd(id);
     M.append(box);
   });
-  M.querySelectorAll(".x").forEach(b=>b.onclick=()=>{const id=b.closest("li").dataset.id;hist[curDate]=dayLog().filter(e=>e.id!==id);save();renderDay()});
+  M.querySelectorAll(".x").forEach(b=>b.onclick=()=>{const id=b.closest("li").dataset.id;bury(id);hist[curDate]=dayLog().filter(e=>e.id!==id);save();renderDay()});
   M.querySelectorAll(".handle").forEach(h=>h.addEventListener("pointerdown",startDrag));
 }
 function shiftDay(n){const d=parseKey(curDate);d.setDate(d.getDate()+n);const k=key(d);if(k>todayKey())return;curDate=k;
@@ -600,7 +625,7 @@ $("toToday").onclick=()=>{curDate=todayKey();disarm();renderDay()};
 function disarm(){const b=$("reset");b.classList.remove("armed");b.textContent="Очистить день"}
 $("reset").onclick=()=>{const b=$("reset");
   if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Точно очистить?";setTimeout(disarm,4000);return}
-  delete hist[curDate];save();disarm();renderDay()};
+  (hist[curDate]||[]).forEach(e=>bury(e.id));delete hist[curDate];save();disarm();renderDay()};
 
 /* ---------- drag & drop between meals ---------- */
 let drag=null;
@@ -632,7 +657,7 @@ function cleanupDrag(){
   document.querySelectorAll(".meal.hot").forEach(x=>x.classList.remove("hot"));
 }
 function endDrag(){const d=drag;cleanupDrag();drag=null;
-  if(d&&d.target){const e=dayLog().find(x=>x.id===d.id);if(e&&e.meal!==d.target){e.meal=d.target;save()}}renderDay()}
+  if(d&&d.target){const e=dayLog().find(x=>x.id===d.id);if(e&&e.meal!==d.target){e.meal=d.target;touch(e);save()}}renderDay()}
 function cancelDrag(){cleanupDrag();drag=null;renderDay()}
 
 /* ---------- products tab ---------- */
@@ -681,13 +706,13 @@ $("pf-addu").onclick=()=>unitRow($("pf-units"));
 $("pf-del").onclick=()=>{
   const b=$("pf-del");
   if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Точно удалить?";return}
-  prods=prods.filter(p=>p.id!==editing);save();closeSheet();renderProducts();toast("Продукт удалён")};
+  bury(editing);prods=prods.filter(p=>p.id!==editing);save();closeSheet();renderProducts();toast("Продукт удалён")};
 $("pf").onsubmit=e=>{e.preventDefault();
   const data={name:$("pf-name").value.trim(),k:num($("pf-k").value),p:num($("pf-p").value),f:num($("pf-f").value)||0,c:num($("pf-c").value)||0,
     barcode:$("pf-bc").value.replace(/\D/g,"")||undefined,units:readUnits($("pf-units"))};
   let p;
-  if(editing){p=prods.find(x=>x.id===editing);Object.assign(p,data)}
-  else{p={id:"c"+Date.now(),...(pendingScan||{}),...data};prods.unshift(p)}
+  if(editing){p=prods.find(x=>x.id===editing);Object.assign(p,data);touch(p)}
+  else{p=touch({id:"c"+Date.now(),...(pendingScan||{}),...data});prods.unshift(p)}
   save();renderProducts();
   const next=afterSave;afterSave=null;pendingScan=null;
   if(next==="amount"){openSheet("sh-add");showAmount(p.id)}else{closeSheet();toast("Продукт сохранён")}
@@ -816,7 +841,7 @@ $("prevM").onclick=()=>{calMonth=new Date(calMonth.getFullYear(),calMonth.getMon
 $("nextM").onclick=()=>{calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+1,1);renderCal()};
 
 /* ---------- settings ---------- */
-function setGoal(k,v){v=num(v);if(v>0){GOAL[k]=v;save();renderDay()}}
+function setGoal(k,v){v=num(v);if(v>0){GOAL[k]=v;GOAL.t=now();save();renderDay()}}
 $("goalK").onchange=e=>setGoal("k",e.target.value);
 $("goalP").onchange=e=>setGoal("p",e.target.value);
 function exportData(){return JSON.stringify({app:"kbju",v:1,exported:new Date().toISOString(),goals:GOAL,products:prods,hist})}
@@ -841,15 +866,118 @@ function importData(text){
 $("importFile").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(f)importData(await f.text())};
 $("importTextBtn").onclick=()=>{const t=$("importText").value.trim();if(!t)return;importData(t);$("importText").value=""};
 
+/* ---------- sync via private GitHub gist ---------- */
+const GH="https://api.github.com",GIST_DESC="kbju-sync",GIST_FILE="kbju.json";
+let sync={token:"",gist:"",last:0};
+try{sync={...sync,...JSON.parse(localStorage.getItem("kbju-sync")||"{}")}}catch(e){}
+const saveSync=()=>{try{localStorage.setItem("kbju-sync",JSON.stringify(sync))}catch(e){}};
+let syncing=false,syncAgain=false,syncTimer=null,syncErrShown=false;
+function scheduleSync(){if(!sync.token)return;clearTimeout(syncTimer);syncTimer=setTimeout(syncNow,1500)}
+function snapshot(){return {app:"kbju",v:2,goals:GOAL,products:prods,hist,tomb}}
+function mergeData(a,b){
+  const T={...a.tomb};Object.entries(b.tomb||{}).forEach(([k,v])=>{if(!(T[k]>=v))T[k]=v});
+  const cutoff=now()-1000*60*60*24*120;Object.keys(T).forEach(k=>{if(T[k]<cutoff)delete T[k]});
+  const alive=o=>!(T[o.id]>=(o.t||0));
+  // продукты: новее побеждает; порядок — как у этого устройства, новые с другого — в начало
+  const pm=new Map();(a.products||[]).forEach(p=>pm.set(p.id,p));
+  const fresh=[];
+  (b.products||[]).forEach(p=>{const x=pm.get(p.id);if(!x)fresh.push(p);else if((p.t||0)>(x.t||0))pm.set(p.id,p)});
+  const P=[...fresh,...pm.values()].filter(alive);
+  // записи: собираем все по id, новее побеждает
+  const em=new Map();
+  const add=(h)=>Object.entries(h||{}).forEach(([d,arr])=>(arr||[]).forEach(e=>{const x=em.get(e.id);if(!x||(e.t||0)>(x.e.t||0))em.set(e.id,{d,e})}));
+  add(a.hist);add(b.hist);
+  const H={};em.forEach(({d,e})=>{if(!alive(e))return;(H[d]||(H[d]=[])).push(e)});
+  Object.values(H).forEach(arr=>arr.sort((x,y)=>(x.at||0)-(y.at||0)));
+  const ga=a.goals||{},gb=b.goals||{};const G=(gb.t||0)>(ga.t||0)?gb:ga;
+  return {app:"kbju",v:2,goals:G.k>0?G:GOAL,products:P,hist:H,tomb:T};
+}
+async function gh(path,opt={}){
+  const r=await fetch(GH+path,{...opt,cache:"no-store",headers:{"Authorization":"Bearer "+sync.token,"Accept":"application/vnd.github+json",...(opt.body?{"Content-Type":"application/json"}:{})}});
+  if(r.status===401)throw Object.assign(new Error("bad token"),{code:401});
+  if(r.status===404)throw Object.assign(new Error("not found"),{code:404});
+  if(!r.ok)throw Object.assign(new Error("http "+r.status),{code:r.status});
+  return r.json();
+}
+async function findGist(){
+  for(let page=1;page<=5;page++){
+    const list=await gh(`/gists?per_page=100&page=${page}`);
+    const g=list.find(x=>x.description===GIST_DESC&&x.files&&x.files[GIST_FILE]);
+    if(g)return g.id;if(list.length<100)break;
+  }
+  return null;
+}
+async function readGist(id){
+  const g=await gh(`/gists/${id}`);const f=g.files&&g.files[GIST_FILE];if(!f)return null;
+  let text=f.content;
+  if(f.truncated&&f.raw_url){const r=await fetch(f.raw_url,{cache:"no-store"});text=await r.text()}
+  try{return JSON.parse(text)}catch(e){return null}
+}
+async function syncNow(){
+  if(!sync.token)return;
+  if(syncing){syncAgain=true;return}
+  if(!navigator.onLine){renderSync("нет сети, синхронизирую позже");return}
+  syncing=true;renderSync("синхронизация…");
+  try{
+    if(!sync.gist)sync.gist=await findGist()||"";
+    let remote=null;
+    if(sync.gist){try{remote=await readGist(sync.gist)}catch(e){if(e.code===404){sync.gist="";}else throw e}}
+    const local=snapshot();
+    const merged=remote?mergeData(local,remote):local;
+    const text=JSON.stringify(merged);
+    if(!sync.gist){
+      const g=await gh("/gists",{method:"POST",body:JSON.stringify({description:GIST_DESC,public:false,files:{[GIST_FILE]:{content:text}}})});
+      sync.gist=g.id;
+    }else if(!remote||text!==JSON.stringify(remote)){
+      await gh(`/gists/${sync.gist}`,{method:"PATCH",body:JSON.stringify({files:{[GIST_FILE]:{content:text}}})});
+    }
+    const changed=JSON.stringify(local)!==text;
+    prods=merged.products;hist=merged.hist;tomb=merged.tomb;GOAL=merged.goals;
+    try{localStorage.setItem("kbju-hist",JSON.stringify(hist));localStorage.setItem("kbju-products",JSON.stringify(prods));
+      localStorage.setItem("kbju-goals",JSON.stringify(GOAL));localStorage.setItem("kbju-tomb",JSON.stringify(tomb))}catch(e){}
+    sync.last=now();saveSync();syncErrShown=false;
+    if(changed&&!drag&&!openSheetEl){renderDay();if(tab==="products")renderProducts();if(tab==="history"){renderAvg();renderCal()}}
+    renderSync();
+  }catch(e){
+    const msg=e.code===401?"ключ не подходит или отозван":e.code===403||e.code===429?"GitHub временно ограничил запросы":"не удалось связаться с GitHub";
+    renderSync(msg,true);
+    if(!syncErrShown){toast("Синхронизация: "+msg);syncErrShown=true}
+  }finally{
+    syncing=false;if(syncAgain){syncAgain=false;scheduleSync()}
+  }
+}
+function renderSync(state,err){
+  const on=!!sync.token;$("syncOff").hidden=on;$("syncOn").hidden=!on;
+  const s=$("syncState");
+  s.style.color=err?"var(--bad)":"";
+  s.textContent=!on?"выключена":state||(sync.last?"обновлено в "+new Date(sync.last).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}):"включена");
+}
+$("syncConnect").onclick=async()=>{
+  const t=$("syncToken").value.trim();if(t.length<20){toast("Вставь ключ целиком");return}
+  sync={token:t,gist:"",last:0};saveSync();$("syncToken").value="";
+  await syncNow();
+  if(sync.last)toast("Синхронизация включена");
+  else{sync={token:"",gist:"",last:0};saveSync();renderSync()}
+};
+$("syncNowBtn").onclick=()=>syncNow();
+$("syncOffBtn").onclick=()=>{const b=$("syncOffBtn");
+  if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Точно отключить?";setTimeout(()=>{b.classList.remove("armed");b.textContent="Отключить"},4000);return}
+  sync={token:"",gist:"",last:0};saveSync();b.classList.remove("armed");b.textContent="Отключить";renderSync();toast("Синхронизация отключена. Данные на этом устройстве остались.")};
+window.addEventListener("online",()=>syncNow());
+setInterval(()=>{if(!document.hidden&&sync.token)syncNow()},60000);
+renderSync();
+
 /* ---------- lifecycle ---------- */
 let lastToday=todayKey();
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden){stopScan();return}
   if(openSheetEl&&openSheetEl.id==="sh-scan"&&!scanning)startScan();
+  syncNow();
   const t=todayKey();if(t!==lastToday){if(curDate===lastToday)curDate=t;lastToday=t;renderDay()}
 });
 let startTab="today";try{startTab=localStorage.getItem("kbju-tab")||"today"}catch(e){}
 renderDay();setTab(["today","products","history","settings"].includes(startTab)?startTab:"today");
+syncNow();
 if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
