@@ -1,5 +1,5 @@
 // Офлайн-кэш: оболочка приложения и фото продуктов
-const VERSION = "kbju-v3";
+const VERSION = "kbju-v4";
 const SHELL = ["./", "./index.html", "./html5-qrcode.min.js", "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
@@ -30,7 +30,7 @@ self.addEventListener("fetch", e => {
   if (url.origin !== location.origin) return;
   // Страница — сначала сеть (чтобы приходили обновления), без сети — кэш
   if (e.request.mode === "navigate") {
-    e.respondWith(fetch(e.request).then(res => {
+    e.respondWith(fetch(e.request, { cache: "no-cache" }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put("./index.html", copy)); }
       return res;
     }).catch(() => caches.match("./index.html")));

@@ -978,7 +978,15 @@ document.addEventListener("visibilitychange",()=>{
 let startTab="today";try{startTab=localStorage.getItem("kbju-tab")||"today"}catch(e){}
 renderDay();setTab(["today","products","history","settings"].includes(startTab)?startTab:"today");
 syncNow();
-if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+// обновления: проверяем новую версию при каждом открытии и перезагружаемся, когда она установилась
+if("serviceWorker" in navigator&&location.protocol!=="file:"){
+  const hadController=!!navigator.serviceWorker.controller;let reloaded=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!hadController||reloaded||drag||openSheetEl)return;reloaded=true;location.reload()});
+  navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(reg=>{
+    reg.update().catch(()=>{});
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)reg.update().catch(()=>{})});
+  }).catch(()=>{});
+}
 </script>
 </body>
 </html>
