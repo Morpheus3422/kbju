@@ -855,11 +855,12 @@ function importData(text){
   let d;try{d=JSON.parse(text)}catch(e){toast("Не получилось прочитать данные: это не похоже на копию");return}
   if(!d||(!d.products&&!d.hist)){toast("В файле нет продуктов или истории");return}
   let np=0,ne=0;
+  // импорт — осознанное действие: импортированное считается свежим и «воскрешает» ранее удалённое
   (d.products||[]).forEach(p=>{if(!p||!p.name)return;const i=prods.findIndex(x=>x.id===p.id||(p.barcode&&x.barcode===p.barcode));
-    if(i>=0)prods[i]={...prods[i],...p};else{prods.push(p);np++}});
-  Object.entries(d.hist||{}).forEach(([k,arr])=>{if(!Array.isArray(arr))return;const c=hist[k]||(hist[k]=[]);
-    arr.forEach(e=>{if(!e.id)e.id=uid();if(!c.some(x=>x.id===e.id)){c.push(e);ne++}})});
-  if(d.goals&&d.goals.k>0&&d.goals.p>0)GOAL=d.goals;
+    if(i>=0){delete tomb[prods[i].id];prods[i]=touch({...prods[i],...p,id:prods[i].id})}else{delete tomb[p.id];prods.push(touch({...p}));np++}});
+  Object.entries(d.hist||{}).forEach(([k,arr])=>{if(!Array.isArray(arr)||!/^\d{4}-\d{2}-\d{2}$/.test(k))return;const c=hist[k]||(hist[k]=[]);
+    arr.forEach(e=>{if(!e||!(e.k>=0))return;if(!e.id)e.id=uid();if(!c.some(x=>x.id===e.id)){delete tomb[e.id];c.push(touch({...e,at:e.at||now()}));ne++}})});
+  if(d.goals&&d.goals.k>0&&d.goals.p>0)GOAL={...d.goals,t:now()};
   normalize();save();renderDay();$("goalK").value=GOAL.k;$("goalP").value=GOAL.p;
   toast(`Добавлено: продуктов ${np}, записей ${ne}`);
 }
@@ -931,8 +932,11 @@ async function syncNow(){
     }else if(!remote||text!==JSON.stringify(remote)){
       await gh(`/gists/${sync.gist}`,{method:"PATCH",body:JSON.stringify({files:{[GIST_FILE]:{content:text}}})});
     }
-    const changed=JSON.stringify(local)!==text;
-    prods=merged.products;hist=merged.hist;tomb=merged.tomb;GOAL=merged.goals;
+    // пока шёл запрос, на устройстве могли что-то изменить — не теряем это: сливаем ещё раз с текущим состоянием
+    const nowLocal=snapshot(),final=mergeData(nowLocal,merged),finalText=JSON.stringify(final);
+    if(finalText!==text)syncAgain=true;
+    const changed=JSON.stringify(nowLocal)!==finalText;
+    prods=final.products;hist=final.hist;tomb=final.tomb;GOAL=final.goals;
     try{localStorage.setItem("kbju-hist",JSON.stringify(hist));localStorage.setItem("kbju-products",JSON.stringify(prods));
       localStorage.setItem("kbju-goals",JSON.stringify(GOAL));localStorage.setItem("kbju-tomb",JSON.stringify(tomb))}catch(e){}
     sync.last=now();saveSync();syncErrShown=false;
