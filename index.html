@@ -328,6 +328,18 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
       </div>
     </div>
     <div class="panel">
+      <div class="mh"><h2>Распознавание этикеток</h2><span class="hint" id="ocrState"></span></div>
+      <div class="hint">Для точного распознавания нужен бесплатный ключ OCR.space. Фото таблицы отправляется на их сервер. Без ключа распознавание идёт прямо на телефоне, но заметно хуже: путает запятые.</div>
+      <ol class="hint" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+        <li>Открой <a href="https://ocr.space/ocrapi/freekey" target="_blank" rel="noopener" style="color:var(--prot);font-weight:700">страницу бесплатного ключа</a>, впиши почту и нажми кнопку регистрации.</li>
+        <li>Ключ придёт письмом. Скопируй его и вставь сюда.</li>
+      </ol>
+      <div class="manual">
+        <input id="ocrKey" type="password" autocomplete="off" placeholder="ключ OCR.space" aria-label="Ключ OCR.space">
+        <button class="btn go" id="ocrKeySave" type="button">Сохранить</button>
+      </div>
+    </div>
+    <div class="panel">
       <h2>Данные</h2>
       <div class="hint">Всё хранится на этом устройстве. Сохраняй копию, чтобы перенести данные на другое устройство или не потерять их.</div>
       <div class="acts">
@@ -490,12 +502,12 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="grab"><i></i></div>
     <div class="sh"><div class="dnav"><button class="back" data-back="sh-prod" type="button" aria-label="Назад">‹</button><b id="lblTitle">Этикетка</b></div><button class="x" data-close type="button" aria-label="Закрыть">×</button></div>
     <div class="sbody">
-      <textarea id="lblText" placeholder="Сюда попадёт текст таблицы Nährwerte"></textarea>
-      <div class="hint lblhow">
-        <b>На iPhone:</b> нажми на поле выше, затем нажми ещё раз и выбери <b>«Сканировать текст»</b> (значок рамки со строками). Наведи камеру на таблицу Nährwerte и нажми <b>«Вставить»</b>.<br>
-        <b>Или:</b> сфотографируй этикетку, открой фото, нажми и удерживай на тексте → «Выбрать все» → «Скопировать» и вставь сюда.<br>
-        <b>На ПК:</b> вставь скопированный текст этикетки.
-      </div>
+      <label class="btn go wide filebtn" style="justify-content:center">Сфотографировать таблицу<input type="file" id="lblPhoto" accept="image/*"></label>
+      <div class="status" id="ocrStatus"></div>
+      <details id="lblTextBox">
+        <summary style="cursor:pointer;font-weight:600">Распознанный текст / вставить вручную</summary>
+        <textarea id="lblText" style="margin-top:8px" placeholder="Сюда попадёт текст таблицы Nährwerte. Можно вставить и свой."></textarea>
+      </details>
       <div class="preview" id="lblPv"></div>
       <div class="status" id="lblNote"></div>
       <div class="acts">
@@ -760,7 +772,7 @@ function setHead(p){
   const name=$("pf-name").value||p?.name||"",has=!!pfPhoto.img||!!pfPhoto.imgS;
   $("pfThumb").outerHTML=thumbHTML({name:name||"?",img:pfPhoto.img,imgS:pfPhoto.imgS}).replace('class="thumb"','class="thumb" id="pfThumb"');
   $("pfHName").textContent=name||"Новый продукт";$("pfHBrand").textContent=p?.brand||"";$("pfHCode").textContent=$("pf-bc").value||p?.barcode||"";
-  $("pfPhotoDel").hidden=!has;$("pfPhotoEdit").hidden=!cropSrc;
+  $("pfPhotoDel").hidden=!has;$("pfPhotoEdit").hidden=!photoSrc;
   $("pfFromBase").hidden=!validCode($("pf-bc").value.replace(/\D/g,""));
 }
 let pfBrand;
@@ -772,7 +784,7 @@ function fillForm(p){
   if(!$("pf-units").children.length)unitRow($("pf-units"));
 }
 function openProduct(p){
-  editing=p?p.id:null;pendingScan=null;afterSave=null;cropSrc=null;
+  editing=p?p.id:null;pendingScan=null;afterSave=null;cropSrc=null;photoSrc=null;
   pfPhoto={img:p?.img,imgS:p?.imgS};pfBrand=p?.brand;
   $("pfTitle").textContent=p?"Изменить продукт":"Новый продукт";
   $("pf-save").textContent=p?"Сохранить изменения":"Сохранить";
@@ -795,7 +807,7 @@ $("pf").onsubmit=e=>{e.preventDefault();
   if(editing){p=prods.find(x=>x.id===editing);Object.assign(p,data);touch(p)}
   else{p=touch({id:"c"+Date.now(),...data});prods.unshift(p)}
   save();renderProducts();
-  const next=afterSave;afterSave=null;pendingScan=null;cropSrc=null;
+  const next=afterSave;afterSave=null;pendingScan=null;cropSrc=null;photoSrc=null;
   if(next==="amount"){openSheet("sh-add");showAmount(p.id)}else{closeSheet();toast("Продукт сохранён")}
 };
 
@@ -838,23 +850,33 @@ function drawCrop(){
   const im=$("cropImg"),s=im.clientWidth/cropSrc.naturalWidth,r=$("cropRect");
   r.style.left=cropBox.x*s+"px";r.style.top=cropBox.y*s+"px";r.style.width=cropBox.w*s+"px";r.style.height=cropBox.h*s+"px";
 }
-async function openCrop(file){
+let cropMode="photo",photoSrc=null;
+function cropUI(){
+  const lbl=cropMode==="label";
+  $("sh-crop").dataset.parent=lbl?"sh-label":"sh-prod";$("sh-crop").querySelector("[data-back]").dataset.back=lbl?"sh-label":"sh-prod";
+  $("cropTitle").textContent=lbl?"Выдели таблицу":"Фото продукта";$("cropAuto").hidden=lbl;
+  $("cropDone").textContent=lbl?"Распознать":"Готово";
+}
+async function openCrop(file,mode="photo"){
   const url=URL.createObjectURL(file),img=new Image();img.src=url;
   try{await img.decode()}catch(e){toast("Не получилось открыть фото");return}
-  cropSrc=img;$("cropImg").src=url;
-  const auto=autoCropBox(img);cropBox=auto||fullBox(img);
-  $("cropHint").textContent=auto?"Рамка выставлена по контуру. Если нужно, подвинь её или потяни за углы.":"Контур не нашёлся автоматически: выставь рамку вручную.";
+  cropMode=mode;cropSrc=img;if(mode==="photo")photoSrc=img;$("cropImg").src=url;cropUI();
+  if(mode==="label"){const W=img.naturalWidth,H=img.naturalHeight;cropBox={x:W*0.06,y:H*0.06,w:W*0.88,h:H*0.88};
+    $("cropHint").textContent="Обведи рамкой только таблицу с цифрами (Brennwert, Fett, Kohlenhydrate, Eiweiß). Чем точнее, тем лучше распознаётся."}
+  else{const auto=autoCropBox(img);cropBox=auto||fullBox(img);
+    $("cropHint").textContent=auto?"Рамка выставлена по контуру. Если нужно, подвинь её или потяни за углы.":"Контур не нашёлся автоматически: выставь рамку вручную."}
   openSheet("sh-crop");
   await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
   if(!$("cropImg").complete)await new Promise(r=>$("cropImg").onload=r);
   drawCrop();
 }
 $("pfPhotoIn").onchange=e=>{const f=e.target.files[0];e.target.value="";if(f)openCrop(f)};
-$("pfPhotoEdit").onclick=async()=>{if(!cropSrc)return;openSheet("sh-crop");await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));drawCrop()};
-$("pfPhotoDel").onclick=()=>{pfPhoto={};cropSrc=null;setHead({brand:pfBrand})};
+$("pfPhotoEdit").onclick=async()=>{if(!photoSrc)return;cropMode="photo";cropSrc=photoSrc;$("cropImg").src=photoSrc.src;cropUI();cropBox=autoCropBox(photoSrc)||fullBox(photoSrc);openSheet("sh-crop");await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));drawCrop()};
+$("pfPhotoDel").onclick=()=>{pfPhoto={};photoSrc=null;setHead({brand:pfBrand})};
 $("cropAuto").onclick=()=>{const a=autoCropBox(cropSrc);if(a){cropBox=a;drawCrop()}else toast("Контур не нашёлся — выставь рамку вручную")};
 $("cropAll").onclick=()=>{cropBox=fullBox(cropSrc);drawCrop()};
 $("cropDone").onclick=()=>{
+  if(cropMode==="label"){openSheet("sh-label");runOCR(cropSrc,{...cropBox});return}
   const b=cropBox,s=Math.min(1,320/Math.max(b.w,b.h)),cv=document.createElement("canvas");
   cv.width=Math.max(1,Math.round(b.w*s));cv.height=Math.max(1,Math.round(b.h*s));
   const cx=cv.getContext("2d");cx.imageSmoothingQuality="high";cx.fillStyle="#fff";cx.fillRect(0,0,cv.width,cv.height);
@@ -918,7 +940,54 @@ function renderLabel(){
 }
 $("lblText").oninput=renderLabel;
 $("lblClear").onclick=()=>{$("lblText").value="";renderLabel();$("lblText").focus()};
-$("pfLabel").onclick=()=>{$("lblText").value="";renderLabel();openSheet("sh-label")};
+$("pfLabel").onclick=()=>{$("lblText").value="";$("ocrStatus").textContent="";$("lblTextBox").open=false;renderLabel();openSheet("sh-label")};
+$("lblPhoto").onchange=e=>{const f=e.target.files[0];e.target.value="";if(f)openCrop(f,"label")};
+let ocrKey="";try{ocrKey=localStorage.getItem("kbju-ocrkey")||""}catch(e){}
+function renderOcrState(){$("ocrState").textContent=ocrKey?"ключ сохранён":"без ключа";$("ocrKey").placeholder=ocrKey?"••••••• (сохранён)":"ключ OCR.space"}
+$("ocrKeySave").onclick=()=>{ocrKey=$("ocrKey").value.trim();try{localStorage.setItem("kbju-ocrkey",ocrKey)}catch(e){}$("ocrKey").value="";renderOcrState();toast(ocrKey?"Ключ сохранён":"Ключ удалён")};
+renderOcrState();
+function ocrStatus(t,err){const s=$("ocrStatus");s.textContent=t;s.className="status"+(err?" err":"")}
+function cropCanvas(img,b,max){
+  const s=Math.min(max/Math.max(b.w,b.h),3),cv=document.createElement("canvas");
+  cv.width=Math.round(b.w*s);cv.height=Math.round(b.h*s);const cx=cv.getContext("2d");cx.imageSmoothingQuality="high";
+  cx.fillStyle="#fff";cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(img,b.x,b.y,b.w,b.h,0,0,cv.width,cv.height);return cv;
+}
+const toBlob=(cv,q)=>new Promise(r=>cv.toBlob(r,"image/jpeg",q));
+async function ocrSpace(cv){
+  let q=0.88,blob=await toBlob(cv,q);while(blob.size>950000&&q>0.4){q-=0.12;blob=await toBlob(cv,q)}
+  const call=async(engine,lang)=>{const fd=new FormData();fd.append("apikey",ocrKey);fd.append("language",lang);fd.append("OCREngine",engine);
+    fd.append("scale","true");fd.append("isTable","true");fd.append("detectOrientation","true");fd.append("file",blob,"label.jpg");
+    const r=await fetch("https://api.ocr.space/parse/image",{method:"POST",body:fd});const j=await r.json();
+    if(j.IsErroredOnProcessing||!j.ParsedResults||!j.ParsedResults[0])throw new Error([].concat(j.ErrorMessage||"OCR error").join(" "));
+    return j.ParsedResults.map(x=>x.ParsedText||"").join("\n")};
+  try{return await call("2","auto")}catch(e){if(/api ?key|invalid|unauthor/i.test(e.message))throw e;return await call("1","ger")}
+}
+let tessLoading=null;
+function loadTesseract(){if(window.Tesseract)return Promise.resolve();if(tessLoading)return tessLoading;
+  tessLoading=new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";sc.onload=res;sc.onerror=()=>{tessLoading=null;rej(new Error("load"))};document.head.append(sc)});return tessLoading}
+async function ocrLocal(cv){
+  // серый + контраст помогают распознаванию
+  const cx=cv.getContext("2d"),im=cx.getImageData(0,0,cv.width,cv.height),d=im.data;let lo=255,hi=0;const g=new Uint8ClampedArray(d.length/4);
+  for(let i=0;i<g.length;i++){const v=0.3*d[i*4]+0.59*d[i*4+1]+0.11*d[i*4+2];g[i]=v;if(v<lo)lo=v;if(v>hi)hi=v}
+  const k=255/Math.max(1,hi-lo);for(let i=0;i<g.length;i++){const v=(g[i]-lo)*k;d[i*4]=d[i*4+1]=d[i*4+2]=v}
+  cx.putImageData(im,0,0);
+  await loadTesseract();
+  const w=await Tesseract.createWorker(["deu","eng"],1,{logger:m=>{if(m.status==="recognizing text")ocrStatus(`Распознаю на телефоне… ${Math.round(m.progress*100)}%`)}});
+  try{await w.setParameters({tessedit_pageseg_mode:"4"});const {data}=await w.recognize(cv);return data.text}finally{w.terminate()}
+}
+async function runOCR(img,box){
+  $("lblApply").disabled=true;
+  try{
+    let text;
+    if(ocrKey){ocrStatus("Распознаю…");text=await ocrSpace(cropCanvas(img,box,2000))}
+    else{ocrStatus("Загружаю распознавание (один раз ~4 МБ)…");text=await ocrLocal(cropCanvas(img,box,1300))}
+    $("lblText").value=text;renderLabel();
+    const r=lblRes||{},n=["k","p","f","c"].filter(x=>r[x]!=null).length;
+    ocrStatus(n?(ocrKey?"Готово. Сверь значения с этикеткой.":"Готово. Без ключа распознавание неточное — обязательно сверь значения."):"Не получилось найти значения. Сфотографируй таблицу ближе и ровнее или впиши вручную.",!n||!ocrKey);
+  }catch(e){
+    ocrStatus(/api ?key|invalid|unauthor/i.test(e.message)?"Ключ OCR.space не подошёл. Проверь его в настройках.":/load|fetch|network/i.test(e.message)?"Нет связи. Проверь интернет и попробуй ещё раз.":"Не удалось распознать: "+e.message,true);
+  }
+}
 $("lblApply").onclick=()=>{const r=lblRes;if(!r)return;
   [["k","pf-k"],["p","pf-p"],["f","pf-f"],["c","pf-c"]].forEach(([k,id])=>{if(r[k]!=null){const el=$(id);el.value=r1(r[k]);el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash")}});
   openSheet("sh-prod");toast("Значения подставлены — проверь их")};
@@ -946,7 +1015,7 @@ $("pfFromBase").onclick=async()=>{
   const {prod,netErr}=await fetchOFF(code);b.disabled=false;b.textContent="Обновить из базы";
   if(!prod){toast(netErr?"Нет связи с базой":"Этого продукта нет в базе");return}
   const d=draftFrom(code,prod);
-  if(d.img){pfPhoto={img:d.img,imgS:d.imgS};cropSrc=null}
+  if(d.img){pfPhoto={img:d.img,imgS:d.imgS};photoSrc=null}
   if(d.brand)pfBrand=d.brand;
   [["k","pf-k"],["p","pf-p"],["f","pf-f"],["c","pf-c"]].forEach(([k,id])=>{if(d[k]>=0)$(id).value=r1(d[k])});
   if(!$("pf-name").value.trim()&&d.name)$("pf-name").value=d.name;
@@ -1011,7 +1080,7 @@ async function lookup(code){
 }
 function showFound(code,p,netErr){
   const draft=draftFrom(code,p);
-  editing=null;cropSrc=null;pfPhoto={img:draft.img,imgS:draft.imgS};pfBrand=draft.brand;
+  editing=null;cropSrc=null;photoSrc=null;pfPhoto={img:draft.img,imgS:draft.imgS};pfBrand=draft.brand;
   afterSave=scanFrom==="add"?"amount":null;
   $("pfTitle").textContent=p?"Найдено в базе":"Новый продукт";
   $("pf-save").textContent=scanFrom==="add"?"Сохранить и добавить":"Сохранить в продукты";
