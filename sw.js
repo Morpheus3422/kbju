@@ -1,5 +1,5 @@
 // Офлайн-кэш: оболочка приложения и фото продуктов
-const VERSION = "kbju-v17";
+const VERSION = "kbju-v18";
 const SHELL = ["./", "./index.html", "./html5-qrcode.min.js", "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 

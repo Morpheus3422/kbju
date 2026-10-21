@@ -825,10 +825,10 @@ function setMode(m){mode=m;
   document.querySelectorAll(".modesw button").forEach(b=>b.setAttribute("aria-selected",b.dataset.mode===m));
   document.querySelectorAll('meta[name="theme-color"]').forEach(x=>{const dark=/dark/.test(x.media);x.content=m==="sport"?(dark?"#191411":"#f4eee7"):(dark?"#141916":"#f3f5f1")});
 }
-document.querySelectorAll(".modesw button").forEach(b=>b.onclick=()=>{if(b.dataset.mode!==mode)setTab(lastTab[b.dataset.mode])});
-function setTab(t){
+document.querySelectorAll(".modesw button").forEach(b=>b.onclick=()=>{const m=b.dataset.mode;if(m!==mode)setTab(lastTab[m]||(m==="sport"?"gym":"today"),m)});
+function setTab(t,forceMode){
   if(!ALL_TABS.includes(t))t="today";
-  const m=SPORT_TABS.includes(t)?"sport":t==="settings"?mode:"food";
+  const m=SPORT_TABS.includes(t)?"sport":t==="settings"?(forceMode||mode):"food";
   if(m!==mode)setMode(m);
   tab=t;lastTab[mode]=t;try{localStorage.setItem("kbju-tab",t);localStorage.setItem("kbju-lasttab",JSON.stringify(lastTab));localStorage.setItem("kbju-mode",mode)}catch(e){}
   ALL_TABS.forEach(x=>{$("v-"+x).hidden=x!==t});
@@ -846,7 +846,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=17;try{document.getElementById("appVer").textContent="версия "+APP_VERSION}catch(e){}
+const APP_VERSION=18;try{document.getElementById("appVer").textContent="версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -1916,7 +1916,7 @@ document.addEventListener("visibilitychange",()=>{
 });
 let startTab="today";try{startTab=localStorage.getItem("kbju-tab")||"today"}catch(e){}
 let startMode="food";try{startMode=localStorage.getItem("kbju-mode")||"food"}catch(e){}
-renderDay();setMode(startMode==="sport"?"sport":"food");setTab(startTab);
+renderDay();setMode(startMode==="sport"?"sport":"food");setTab(startTab,startMode==="sport"?"sport":"food");
 syncNow();
 // обновления: проверяем новую версию при каждом открытии и перезагружаемся, когда она установилась
 if("serviceWorker" in navigator&&location.protocol!=="file:"){
