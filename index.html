@@ -146,6 +146,25 @@ h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 .day.fut{opacity:.4;cursor:default}
 .day.ok{background:var(--okbg)} .day.over{background:var(--overbg)} .day.under{background:var(--underbg)}
 .day.today .d{text-decoration:underline;text-underline-offset:3px}
+.day{position:relative}
+.day .gd{position:absolute;top:2px;right:2px;width:11px;height:11px;color:#8a5a3b}
+.day .gd svg{width:11px;height:11px;display:block}
+@media (prefers-color-scheme:dark){.day .gd{color:#d79a63}}
+.day.wk{background:var(--pc,var(--prot));color:#fff}
+.day.wk .d{color:#fff}
+.day.wk.two{background:linear-gradient(135deg,var(--pc) 50%,var(--pc2) 50%)}
+.glegend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.glegend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.day .wn{font:600 9px var(--display);color:var(--prot);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px}
+.legend .gdl{display:inline-flex;vertical-align:-2px;margin-right:4px;color:#8a5a3b}
+.legend .gdl svg{width:13px;height:13px}
+.wcard{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;background:#f4eee7;border:1px solid #e7dacb;border-radius:16px;padding:12px 14px;cursor:pointer;color:#2c2119;text-align:left;width:100%;font-family:var(--display)}
+.wcard .ic{width:40px;height:40px;border-radius:12px;background:#8a5a3b;color:#fff;display:flex;align-items:center;justify-content:center}
+.wcard .ic svg{width:22px;height:22px}
+.wcard b{font-size:15px;font-weight:800;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wcard span{font-size:12px;color:#7d6b5d;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wcard .go{font:700 13px var(--display);color:#8a5a3b;background:none;border:0}
+@media (prefers-color-scheme:dark){.wcard{background:#231c17;border-color:#3a2e26;color:#f2e8de}.wcard .ic{background:#c98a5c}.wcard span{color:#a99686}.wcard .go{color:#d79a63}}
 .day.sel{border-color:var(--fg)}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
@@ -327,6 +346,7 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
       </div>
       <div class="fc">Жиры <b class="num" id="tf">0</b> г · Углеводы <b class="num" id="tc">0</b> г</div>
     </div>
+    <div id="dayWork" class="view" style="gap:8px"></div>
     <div class="view" id="meals"></div>
     <button class="ghost" id="reset" type="button" style="align-self:center">Очистить день</button>
   </section>
@@ -358,6 +378,7 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
         <span><i style="background:var(--underbg)"></i>меньше</span>
         <span><i style="background:var(--overbg)"></i>больше</span>
         <span><i class="dot"></i>белок выполнен</span>
+        <span><span class="gdl" id="gdlIcon"></span>тренировка</span>
       </div>
       <div class="hint">Нажми на день, чтобы открыть его записи.</div>
     </div>
@@ -370,6 +391,16 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="mh"><h2>Программы</h2><button class="ghost" id="gNewPlan" type="button">+ Программа</button></div>
     <div class="plans" id="gPlans"></div>
     <button class="btn" id="gEmpty" type="button" style="align-self:flex-start">Тренировка без программы</button>
+    <div class="panel">
+      <div class="cal-h">
+        <button class="arrow" id="gPrevM" type="button" aria-label="Предыдущий месяц">‹</button>
+        <b id="gMTitle"></b>
+        <button class="arrow" id="gNextM" type="button" aria-label="Следующий месяц">›</button>
+      </div>
+      <div class="cal" id="gCal"></div>
+      <div class="glegend" id="gLegend"></div>
+      <div class="hint" id="gCalNote">Нажми на день с тренировкой, чтобы открыть её, или на пустой — чтобы записать тренировку задним числом.</div>
+    </div>
     <h2>Тренировки</h2>
     <div class="panel" style="padding:4px 12px"><div id="gSessions"></div></div>
     <h2>Упражнения</h2>
@@ -899,7 +930,13 @@ function renderDay(){
   $("reset").hidden=!(hist[curDate]&&hist[curDate].length);
   renderMeals();
 }
+function renderDayWork(){
+  const W=$("dayWork");const ss=gym.sessions.filter(s=>s.date===curDate&&(s.items||[]).some(i=>setsOf(i).length)).sort((a,b)=>(a.at||0)-(b.at||0));
+  W.innerHTML=ss.map(s=>{const its=s.items.filter(i=>setsOf(i).length);return `<button class="wcard" type="button" data-id="${esc(s.id)}"><div class="ic">${DB}</div><div style="min-width:0"><b>${esc(s.name||"Тренировка")}</b><span>${its.length} упр. · ${esc(its.map(i=>i.name).join(", "))}</span></div><span class="go">Открыть ›</span></button>`}).join("");
+  W.querySelectorAll(".wcard").forEach(b=>b.onclick=()=>openWorkout(b.dataset.id));
+}
 function renderMeals(){
+  if(typeof renderDayWork==="function")renderDayWork();
   const log=hist[curDate]||[],M=$("meals");M.innerHTML="";
   MEALS.forEach(([id,name])=>{
     const items=log.filter(e=>e.meal===id).sort((a,b)=>(a.at||0)-(b.at||0));
@@ -1336,7 +1373,11 @@ function renderAvg(){
     return `<div><span class="t">${t}</span><span class="k">${fmt(Math.round(s.k))} <small>ккал/день</small></span><span class="p">${fmt(s.p)} <small>г белка/день</small></span><span class="s">По ${s.n} дн. с записями · в цели ${s.inGoal}, белок выполнен ${s.protOk}</span></div>`;
   }).join("");
 }
-function renderCal(){
+const DB='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>';
+let gymDays=new Set();
+try{document.getElementById("gdlIcon").innerHTML=DB}catch(e){}
+function refreshGymDays(){gymDays=new Set(gym.sessions.filter(s=>(s.items||[]).some(i=>setsOf(i).length)).map(s=>s.date))}
+function renderCal(){refreshGymDays();
   const y=calMonth.getFullYear(),m=calMonth.getMonth();
   $("mTitle").textContent=calMonth.toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
   const now=new Date();$("nextM").disabled=(y===now.getFullYear()&&m===now.getMonth());
@@ -1348,6 +1389,7 @@ function renderCal(){
     let cls="day",inner=`<span class="d">${d}</span>`;
     if(log&&log.length){const s=sum(log),r=s.k/GOAL.k;cls+=r<0.9?" under":r>1.1?" over":" ok";
       inner+=`<span class="kk">${Math.round(s.k)}</span>`+(s.p>=GOAL.p?`<span class="pd"></span>`:"");}
+    if(gymDays.has(k))inner+=`<span class="gd" aria-label="тренировка">${DB}</span>`;
     if(fut)cls+=" fut";if(k===tk)cls+=" today";if(k===curDate)cls+=" sel";
     h+=`<button type="button" class="${cls}" data-k="${k}" ${fut?"disabled":""} aria-label="${d}">${inner}</button>`;
   }
@@ -1460,8 +1502,42 @@ function renderGym(){
   E.innerHTML=list.length?list.map(e=>`<button class="exrow" type="button" data-n="${esc(e.name)}"><div class="nm">${esc(e.name)}</div><div class="last">${e.last?`${e.last.w?fmtW(e.last.w)+" "+uName(e.last.unit)+" · ":""}${e.last.sets.join(" ")}`:"—"}</div></button>`).join(""):`<div class="empty">Здесь будет прогресс по каждому упражнению</div>`;
   E.querySelectorAll(".exrow").forEach(b=>b.onclick=()=>openExHistory(b.dataset.n));
   $("exNames").innerHTML=list.map(e=>`<option value="${esc(e.name)}">`).join("");
+  renderGymCal();
 }
 let gShowAll=false;
+let gMonth=(()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1)})();
+const PLAN_COLORS=["#8a5a3b","#c0874f","#5e7a52","#9b4f4f","#5c6b8a","#a2884a","#6f4e7c"];
+function planColor(s){const i=gym.plans.findIndex(p=>p.id===s.planId||exKey(p.name)===exKey(s.name));return i>=0?PLAN_COLORS[i%PLAN_COLORS.length]:"#7d6b5d"}
+function renderGymCal(){
+  const y=gMonth.getFullYear(),m=gMonth.getMonth(),tk=todayKey();
+  $("gMTitle").textContent=gMonth.toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
+  const n=new Date();$("gNextM").disabled=(y===n.getFullYear()&&m===n.getMonth());
+  const by={};gym.sessions.forEach(s=>{if((s.items||[]).some(i=>setsOf(i).length))(by[s.date]||(by[s.date]=[])).push(s)});
+  const first=(new Date(y,m,1).getDay()+6)%7,len=new Date(y,m+1,0).getDate();
+  let h=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(w=>`<div class="wd">${w}</div>`).join("");
+  for(let i=0;i<first;i++)h+=`<div class="day blank"></div>`;
+  let cnt=0;
+  for(let d=1;d<=len;d++){const k=key(new Date(y,m,d)),list=by[k]||[],fut=k>tk;if(list.length)cnt++;
+    let cls="day"+(list.length?" wk":"")+(list.length>1?" two":"")+(fut?" fut":"")+(k===tk?" today":"");
+    const st=list.length?` style="--pc:${planColor(list[0])};--pc2:${planColor(list[1]||list[0])}"`:"";
+    h+=`<button type="button" class="${cls}"${st} data-k="${k}" ${fut?"disabled":""} aria-label="${d}${list.length?", "+esc(list.map(s=>s.name).join(", ")):""}"><span class="d">${d}</span></button>`}
+  const rest=(7-((first+len)%7))%7;for(let i=0;i<rest;i++)h+=`<div class="day blank"></div>`;
+  $("gCal").innerHTML=h;
+  const used=new Map();Object.values(by).flat().filter(s=>s.date.startsWith(`${y}-${String(m+1).padStart(2,"0")}`)).forEach(s=>{const c=planColor(s),n=(gym.plans.find(p=>p.id===s.planId||exKey(p.name)===exKey(s.name))||{}).name||"без программы";used.set(n,c)});
+  $("gLegend").innerHTML=[...used].map(([n,c])=>`<span><i style="background:${c}"></i>${esc(n)}</span>`).join("");
+  $("gCalNote").textContent=`В этом месяце: ${cnt} ${cnt%10===1&&cnt%100!==11?"день":cnt%10>=2&&cnt%10<=4&&(cnt%100<10||cnt%100>=20)?"дня":"дней"} с тренировками. Нажми на день, чтобы открыть тренировку или записать её задним числом.`;
+  $("gCal").querySelectorAll("button.day:not(.fut)").forEach(b=>b.onclick=()=>{const k=b.dataset.k,list=by[k]||[];
+    if(list.length===1)openWorkout(list[0].id);
+    else if(list.length>1){$("gSessions").scrollIntoView({behavior:"smooth"});toast(`${list.length} тренировки в этот день — выбери в списке`)}
+    else{startWorkoutOn(k)}});
+}
+$("gPrevM").onclick=()=>{gMonth=new Date(gMonth.getFullYear(),gMonth.getMonth()-1,1);renderGymCal()};
+$("gNextM").onclick=()=>{gMonth=new Date(gMonth.getFullYear(),gMonth.getMonth()+1,1);renderGymCal()};
+function startWorkoutOn(date){
+  // пустой день: выбрать программу через лист программ — проще начать пустую с датой
+  const s={id:uid(),date,name:"Тренировка",at:now(),t:now(),items:[]};gym.sessions.push(s);save();openWorkout(s.id,true);
+  toast("Тренировка на "+shortDate(date)+": впиши название или добавь упражнения");
+}
 
 /* --- тренировка --- */
 let work=null,wDelArmed=false;
@@ -1479,7 +1555,14 @@ function openWorkout(id,fresh){
 }
 function renderWork(){
   const L=$("wList");L.innerHTML="";
-  if(!work.items.length)L.innerHTML=`<div class="empty">Добавь первое упражнение ниже</div>`;
+  if(!work.items.length){
+    L.innerHTML=gym.plans.length?`<div class="hint">Заполнить из программы:</div><div class="chips">${gym.plans.map(p=>`<button class="chip" type="button" data-pl="${esc(p.id)}">${esc(p.name)}</button>`).join("")}</div><div class="hint">или добавь упражнения ниже</div>`:`<div class="empty">Добавь первое упражнение ниже</div>`;
+    L.querySelectorAll("[data-pl]").forEach(b=>b.onclick=()=>{const p=gym.plans.find(x=>x.id===b.dataset.pl);if(!p)return;
+      work.name=p.name;work.planId=p.id;$("wName").value=p.name;
+      work.items=p.ex.map(e=>{const l=lastOf(e.name,work.id);return {id:uid(),name:e.name,unit:l?.unit||e.unit||gym.unit,w:l?.w||"",sets:Array(Math.max(3,l?.sets.length||0)).fill(null)}});
+      touch(work);gSaveSoon();renderWork()});
+    return;
+  }
   work.items.forEach((it,ix)=>{
     const l=lastOf(it.name,work.id),c=document.createElement("div");c.className="exc";
     const [w1,...wr]=String(it.w||"").split("+");const w2=wr.join("+");
@@ -1517,7 +1600,7 @@ $("wAddExBtn").onclick=addExToWork;$("wAddEx").addEventListener("keydown",e=>{if
 function closeWork(){
   if(!work)return;const filled=work.items.some(i=>setsOf(i).length);
   if(!filled&&gym.sessions.includes(work)){bury(work.id);gym.sessions=gym.sessions.filter(s=>s!==work);toast("Пустая тренировка не сохранена")}
-  work=null;clearTimeout(gSaveSoon.t);save();if(tab==="gym")renderGym();
+  work=null;clearTimeout(gSaveSoon.t);save();if(tab==="gym")renderGym();renderDay();if(tab==="history")renderCal();
 }
 $("wDone").onclick=()=>{const had=work&&work.items.some(i=>setsOf(i).length);closeSheet();if(had)toast("Тренировка сохранена")};
 $("wDel").onclick=()=>{if(!wDelArmed){wDelArmed=true;$("wDel").textContent="Точно удалить?";$("wDel").classList.add("armed");return}
