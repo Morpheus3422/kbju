@@ -216,6 +216,12 @@ function renderEd(){
   $("pteList").innerHTML=[`<button type="button" class="chip sm" data-l="" aria-pressed="${!ed.list}">Входящие</button>`,...planner.lists.map(l=>`<button type="button" class="chip sm" data-l="${esc(l.id)}" aria-pressed="${ed.list===l.id}"><i class="pd" style="background:${l.color}"></i>${esc(l.name)}</button>`),`<button type="button" class="chip sm" data-new="1">+ список</button>`].join("");
   $("pteList").querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{ed.list=b.dataset.l||null;renderEd()});
   $("pteList").querySelector("[data-new]").onclick=()=>{const n=$("pteNewList");n.hidden=false;n.focus()};
+  // напоминание
+  const remOpts=ed.time?[["0","В момент начала"],["5","За 5 минут"],["15","За 15 минут"],["30","За 30 минут"],["60","За 1 час"],["1440","За 1 день"],["none","Без напоминания"]]:[["none","Без напоминания"],["d9","В 9:00 в этот день"],["p20","Накануне в 20:00"]];
+  const curRem=remOf(ed)||"none";
+  $("pteRem").innerHTML=remOpts.map(([v,n])=>`<option value="${v}"${v===curRem?" selected":""}>${n}</option>`).join("");
+  if(!remOpts.some(o=>o[0]===curRem))$("pteRem").value=remOpts[0][0];
+  $("pteRemWrap").hidden=!ed.date;
   const r=ed.rep,f=r?r.f:"";
   $("pteRep").value=f;$("pteDays").hidden=f!=="w";$("pteRep").disabled=!ed.date;
   if(f==="w"){const ds=r.days&&r.days.length?r.days:[isoDow(parseKey(ed.date||t0))];
@@ -230,6 +236,13 @@ function renderEd(){
 $("pteDate").onchange=()=>{ed.date=$("pteDate").value||null;if(!ed.date)ed.rep=null;renderEd()};
 $("pteTime").onchange=()=>{ed.time=$("pteTime").value||null;if(!ed.time)ed.end=null;else if(!ed.date)ed.date=todayKey();renderEd()};
 $("pteEnd").onchange=()=>{ed.end=$("pteEnd").value||null};
+$("pteRem").onchange=()=>{ed.rem=$("pteRem").value};
+$("pteCal").onclick=()=>{
+  const cur={...ed,title:$("pteName").value.trim()||ed.title,notes:$("pteNotes").value};
+  if(!cur.date){toast("Сначала выбери дату");return}
+  const ics=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Ascend//План//RU","METHOD:PUBLISH",...icsEvent({...cur,id:cur.id+"-1"}),"END:VCALENDAR"].map(icsFold).join("\r\n");
+  openICS(ics,cur.title);
+};
 $("pteRep").onchange=()=>{const f=$("pteRep").value;ed.rep=f?{f,...(f==="w"?{days:[isoDow(parseKey(ed.date||todayKey()))]}:{})}:null;renderEd()};
 $("pteNewList").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const n=e.target.value.trim();if(!n)return;const l=listByName(n,true);ed.list=l.id;e.target.value="";e.target.hidden=true;save();renderEd()}});
 function addSub(){const v=$("pteSubNew").value.trim();if(!v)return;ed.sub=ed.sub||[];ed.sub.push({id:uid(),t:v,done:false});$("pteSubNew").value="";renderEd();$("pteSubNew").focus()}
