@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Калории и белок</title>
+<title>Режим</title>
 <meta name="theme-color" content="#f3f5f1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#141916" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="ККАЛ">
+<meta name="apple-mobile-web-app-title" content="Режим">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -1028,7 +1028,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=22;try{document.getElementById("appVer").textContent="версия "+APP_VERSION}catch(e){}
+const APP_VERSION=23;try{document.getElementById("appVer").textContent="Режим · версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
