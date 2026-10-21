@@ -31,7 +31,7 @@
   --okbg:#1f3a2b; --overbg:#43241f; --underbg:#3a2e1d; --drop:#1f3328; --scrim:rgba(0,0,0,.6);
   --bar:rgba(28,35,31,.92); color-scheme:dark}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{-webkit-text-size-adjust:100%;touch-action:manipulation}
+html{-webkit-text-size-adjust:100%;touch-action:manipulation;overflow-y:scroll;scrollbar-gutter:stable}
 /* iPhone приближает страницу, если шрифт поля меньше 16px — держим 16px на телефонах */
 @media (pointer:coarse){input,select,textarea{font-size:16px!important}}
 body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 var(--display);
@@ -252,10 +252,10 @@ body.kbopen .sheet .sbody{padding-bottom:16px}
 .sugg button .sn{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sugg button mark{background:none;color:var(--prot);font-weight:800}
 /* ===== План: жёлтая тема ===== */
-body.plan{--bg:#fbf8ec;--panel:#fffef8;--fg:#2b2614;--muted:#7b7354;--line:#eee6c8;--prot:#b88a00;--chip:#f6efd2;--track:#efe7c8;--drop:#f7efcf;--bar:rgba(255,254,248,.92);--okbg:#f6e7a8;--acc:#f2c224}
-@media (prefers-color-scheme:dark){body.plan{--bg:#17150b;--panel:#211e10;--fg:#f4eed6;--muted:#a59d7d;--line:#38331a;--prot:#f0c43a;--chip:#2c2814;--track:#332e18;--drop:#2f2a14;--bar:rgba(33,30,16,.92);--okbg:#4a3f12;--acc:#f0c43a}}
-body.plan .go,body.plan .btn.go{background:var(--acc);border-color:var(--acc);color:#2b2614}
-body.plan .modesw button[aria-selected=true]{color:#2b2614;background:var(--acc)}
+body.planmode{--bg:#fbf8ec;--panel:#fffef8;--fg:#2b2614;--muted:#7b7354;--line:#eee6c8;--prot:#b88a00;--chip:#f6efd2;--track:#efe7c8;--drop:#f7efcf;--bar:rgba(255,254,248,.92);--okbg:#f6e7a8;--acc:#f2c224}
+@media (prefers-color-scheme:dark){body.planmode{--bg:#17150b;--panel:#211e10;--fg:#f4eed6;--muted:#a59d7d;--line:#38331a;--prot:#f0c43a;--chip:#2c2814;--track:#332e18;--drop:#2f2a14;--bar:rgba(33,30,16,.92);--okbg:#4a3f12;--acc:#f0c43a}}
+body.planmode .go,body.planmode .btn.go{background:var(--acc);border-color:var(--acc);color:#2b2614}
+body.planmode .modesw button[aria-selected=true]{color:#2b2614;background:var(--acc)}
 .pfab{position:fixed;z-index:40;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(var(--tabh) + env(safe-area-inset-bottom,0px) + 14px);width:58px;height:58px;border-radius:50%;border:0;background:var(--acc,#f2c224);color:#2b2614;box-shadow:0 8px 20px rgba(120,90,0,.28);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .pfab svg{width:26px;height:26px}
 .pring{position:relative;width:52px;height:52px;flex:none}
@@ -1000,7 +1000,7 @@ const SPORT_TABS=["gym","gcal","gex"],PLAN_TABS=["ptoday","pup","pcal","plists"]
 let mode="food",lastTab={food:"today",sport:"gym",plan:"ptoday"};
 try{const lt=JSON.parse(localStorage.getItem("kbju-lasttab"));if(lt)lastTab={...lastTab,...lt}}catch(e){}
 function setMode(m){mode=m;
-  document.body.classList.toggle("gym",m==="sport");document.body.classList.toggle("plan",m==="plan");
+  document.body.classList.toggle("gym",m==="sport");document.body.classList.toggle("planmode",m==="plan");
   document.querySelectorAll(".tabs nav").forEach(n=>n.hidden=n.dataset.mode!==m);
   document.querySelectorAll(".modesw button").forEach(b=>b.setAttribute("aria-selected",b.dataset.mode===m));
   document.querySelectorAll('meta[name="theme-color"]').forEach(x=>{const dark=/dark/.test(x.media);x.content=m==="sport"?(dark?"#191411":"#f4eee7"):m==="plan"?(dark?"#17150b":"#fbf8ec"):(dark?"#141916":"#f3f5f1")});
@@ -1028,7 +1028,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=20;try{document.getElementById("appVer").textContent="версия "+APP_VERSION}catch(e){}
+const APP_VERSION=22;try{document.getElementById("appVer").textContent="версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
