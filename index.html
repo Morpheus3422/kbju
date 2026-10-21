@@ -292,8 +292,11 @@ body{transition:background .25s}
 .sin.down{border-color:#c0574c;color:#b0443a;background:rgba(192,87,76,.09)}
 @media (prefers-color-scheme:dark){.sin.up{color:#9ad595;background:rgba(120,190,110,.16);border-color:#6fae67}.sin.down{color:#f09086;background:rgba(240,120,110,.1);border-color:#c66a60}}
 @keyframes prpulse{0%{box-shadow:0 0 0 0 rgba(90,160,80,.5)}100%{box-shadow:0 0 0 9px rgba(90,160,80,0)}}
-.sin.pulse{animation:prpulse 1s ease-out 2}
-@media (prefers-reduced-motion:reduce){.sin.pulse{animation:none}}
+.sin.pulse,.win.pulse{animation:prpulse 1s ease-out 2}
+.win{transition:background .25s,border-color .25s,color .25s}
+.win.up{border-color:#4f8a4a;color:#2f6b2c;background:rgba(79,138,74,.13);font-weight:700}
+@media (prefers-color-scheme:dark){.win.up{color:#9ad595;background:rgba(120,190,110,.16);border-color:#6fae67}}
+@media (prefers-reduced-motion:reduce){.sin.pulse,.win.pulse{animation:none}}
 .mini{border:1px dashed var(--line);background:none;border-radius:10px;width:38px;height:40px;font-size:18px;cursor:pointer;color:var(--muted)}
 .lastline{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
 .lastline b{font-family:var(--mono);color:var(--fg);font-weight:500}
@@ -520,8 +523,8 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
 </nav>
 <nav role="tablist" data-mode="sport" hidden>
   <button class="tab" role="tab" data-tab="gym" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>Тренировки</button>
-  <button class="tab" role="tab" data-tab="gcal" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Календарь</button>
   <button class="tab" role="tab" data-tab="gex" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19h16M6 15l4-4 3 3 5-6"/></svg>Упражнения</button>
+  <button class="tab" role="tab" data-tab="gcal" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Календарь</button>
   <button class="tab" role="tab" data-tab="settings" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg>Настройки</button>
 </nav></div>
 
@@ -843,7 +846,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=16;try{document.getElementById("appVer").textContent="версия "+APP_VERSION}catch(e){}
+const APP_VERSION=17;try{document.getElementById("appVer").textContent="версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -1676,21 +1679,25 @@ function renderWork(){
     const wi=c.querySelectorAll(".win");
     // подсветка подходов: зелёный — рекорд, красный — меньше прошлого раза (но не после рекордного подхода)
     const hist=exHistory(it.name).filter(h=>h.sid!==work.id&&(h.unit||"kg")===(it.unit||"kg"));
-    const mark=pulseIdx=>{
+    const mark=(pulseIdx,pulseW)=>{
       const W=wTotal(it.w),maxW=hist.reduce((m,h)=>Math.max(m,wTotal(h.w)),0);
+      // новый максимум веса — подсвечиваем сам вес
+      const wUp=hist.length>0&&W>0&&W>maxW;
+      wi.forEach(x=>x.classList.toggle("up",wUp&&!!x.value));
+      if(wUp&&pulseW)wi.forEach(x=>{if(x.value){x.classList.remove("pulse");void x.offsetWidth;x.classList.add("pulse")}});
       const lastSame=l&&(l.unit||"kg")===(it.unit||"kg")?l:null,Wl=lastSame?wTotal(lastSame.w):null;
       let greenBefore=false;
       c.querySelectorAll(".sin").forEach((inp,i)=>{
         const r=it.sets[i];inp.classList.remove("up","down");
         if(!(r>0)||!hist.length)return;
         const best=hist.filter(h=>wTotal(h.w)>=W&&h.sets[i]>0).reduce((m,h)=>Math.max(m,h.sets[i]),0);
-        const up=(W>0&&W>maxW)||(best>0&&r>best);
+        const up=best>0&&r>best;
         const down=!up&&!greenBefore&&lastSame&&W<=Wl&&lastSame.sets[i]>0&&r<lastSame.sets[i];
         if(up){inp.classList.add("up");greenBefore=true;if(pulseIdx===i){inp.classList.remove("pulse");void inp.offsetWidth;inp.classList.add("pulse")}}
         else if(down)inp.classList.add("down");
       });
     };
-    wi.forEach(inp=>{inp.oninput=()=>{const a=wi[0].value.replace(/,/g,".").replace(/[^\d.]/g,""),b=wi[1].value.replace(/,/g,".").replace(/[^\d.+]/g,"");it.w=[a,b].filter(Boolean).join("+");upd()};inp.onchange=()=>mark()});
+    wi.forEach(inp=>{inp.oninput=()=>{const a=wi[0].value.replace(/,/g,".").replace(/[^\d.]/g,""),b=wi[1].value.replace(/,/g,".").replace(/[^\d.+]/g,"");it.w=[a,b].filter(Boolean).join("+");upd()};inp.onchange=()=>mark(-1,true)});
     c.querySelectorAll(".sin").forEach(inp=>{inp.oninput=()=>{const v=parseInt(inp.value,10);it.sets[+inp.dataset.i]=v>0?v:null;upd()};
       inp.onchange=()=>mark(+inp.dataset.i);
       inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();const n=inp.nextElementSibling;if(n&&n.classList.contains("sin"))n.focus();else inp.blur()}}});
@@ -1714,7 +1721,7 @@ function closeWork(){
   work=null;clearTimeout(gSaveSoon.t);save();if(tab==="gym")renderGym();renderDay();if(tab==="history")renderCal();
 }
 $("wDone").onclick=()=>{const had=work&&work.items.some(i=>setsOf(i).length);
-  const prs=[...document.querySelectorAll("#wList .exc")].filter(c=>c.querySelector(".sin.up")).length;
+  const prs=[...document.querySelectorAll("#wList .exc")].filter(c=>c.querySelector(".sin.up,.win.up")).length;
   closeSheet();if(had)toast(prs?`Тренировка сохранена · рекордов: ${prs}`:"Тренировка сохранена")};
 $("wDel").onclick=()=>{if(!wDelArmed){wDelArmed=true;$("wDel").textContent="Точно удалить?";$("wDel").classList.add("armed");return}
   bury(work.id);gym.sessions=gym.sessions.filter(s=>s!==work);work=null;save();closeSheet();renderGym();toast("Тренировка удалена")};
