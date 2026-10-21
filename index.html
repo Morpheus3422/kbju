@@ -478,7 +478,7 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
       </div>
     </div>
     <div class="panel">
-      <h2>Данные</h2>
+      <div class="mh"><h2>Данные</h2><span class="hint" id="appVer"></span></div>
       <div class="hint">Всё хранится на этом устройстве. Сохраняй копию, чтобы перенести данные на другое устройство или не потерять их.</div>
       <div class="acts">
         <button class="btn" type="button" id="exportBtn">Сохранить копию</button>
@@ -832,8 +832,11 @@ function setTab(t){
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 
 /* без зума: запрет щипка и двойного касания */
-["gesturestart","gesturechange","gestureend"].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
-document.addEventListener("touchmove",e=>{if(e.touches.length>1||(e.scale&&e.scale!==1))e.preventDefault()},{passive:false});
+{const stop=e=>e.preventDefault(),opt={passive:false,capture:true};
+  ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
+  const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
+  window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
+const APP_VERSION=15;try{document.getElementById("appVer").textContent="версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
