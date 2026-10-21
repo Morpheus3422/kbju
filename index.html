@@ -88,6 +88,10 @@ h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 .log li{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
 .log li:first-child{border-top:0}
 .log li.dragging{opacity:.35}
+.log li.ins-before{box-shadow:inset 0 3px 0 var(--prot)}
+.log.ins-end li:last-child{box-shadow:inset 0 -3px 0 var(--prot)}
+.log .n{cursor:pointer;border-radius:8px}
+.log .n:focus-visible{outline:2px solid var(--prot);outline-offset:2px}
 .log .n{min-width:0} .log .n div{font-weight:600;overflow-wrap:anywhere} .log .n span{font-size:12px;color:var(--muted)}
 .log .v{text-align:right;font-size:13px;font-family:var(--mono)} .log .v span{color:var(--muted);display:block;font-size:12px}
 .handle{touch-action:none;cursor:grab;color:var(--muted);border:0;background:none;padding:8px 4px;font-size:16px;line-height:1;letter-spacing:-2px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
@@ -387,10 +391,13 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
       </div>
       <div class="plist" id="aList"></div>
       <details>
-        <summary style="cursor:pointer;font-weight:600">Быстро: только ккал и белок</summary>
+        <summary style="cursor:pointer;font-weight:600">Вручную, без продукта</summary>
         <form class="f" id="mf" style="margin-top:10px">
+          <label class="full">Название<input class="txt" id="mf-n" placeholder="Например, кофе с молоком"></label>
           <label>ккал<input id="mf-k" type="number" step="any" inputmode="decimal"></label>
           <label>Белок, г<input id="mf-p" type="number" step="any" inputmode="decimal"></label>
+          <label>Жиры, г<input id="mf-f" type="number" step="any" inputmode="decimal"></label>
+          <label>Углеводы, г<input id="mf-c" type="number" step="any" inputmode="decimal"></label>
           <button class="btn go full" type="submit">Добавить</button>
         </form>
       </details>
@@ -408,6 +415,7 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
       <div class="preview" id="pv"></div>
       <div class="chips" id="mealPick"></div>
       <button class="btn go wide" id="addBtn" type="button">Добавить</button>
+      <button class="btn del" id="entryDel" type="button" style="margin:0 auto" hidden>Удалить запись</button>
     </div>
   </div>
 </div>
@@ -469,6 +477,27 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
           <button class="btn go" type="submit" id="pf-save">Сохранить</button>
           <button class="btn del" type="button" id="pf-del" hidden>Удалить</button>
         </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: edit manual entry -->
+<div class="sheet" id="sh-entry" hidden>
+  <div class="scrim"></div>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="enTitle">
+    <div class="grab"><i></i></div>
+    <div class="sh"><b id="enTitle">Изменить запись</b><button class="x" data-close type="button" aria-label="Закрыть">×</button></div>
+    <div class="sbody">
+      <form class="f" id="ef">
+        <label class="full">Название<input class="txt" id="ef-n"></label>
+        <label>ккал<input id="ef-k" type="number" step="any" inputmode="decimal"></label>
+        <label>Белок, г<input id="ef-p" type="number" step="any" inputmode="decimal"></label>
+        <label>Жиры, г<input id="ef-f" type="number" step="any" inputmode="decimal"></label>
+        <label>Углеводы, г<input id="ef-c" type="number" step="any" inputmode="decimal"></label>
+        <div class="full chips" id="emealPick"></div>
+        <button class="btn go full wide" type="submit">Сохранить</button>
+        <button class="btn del full" id="efDel" type="button" style="justify-self:center;margin:0">Удалить запись</button>
       </form>
     </div>
   </div>
@@ -551,7 +580,7 @@ try{prods=JSON.parse(localStorage.getItem("kbju-products"))}catch(e){}
 if(!Array.isArray(prods))prods=BASE.map(p=>({...p,units:p.units.map(u=>[...u])})).filter(p=>!tomb[p.id]);
 try{hist=JSON.parse(localStorage.getItem("kbju-hist"))||{}}catch(e){}
 try{const g=JSON.parse(localStorage.getItem("kbju-goals"));if(g&&g.k>0&&g.p>0)GOAL=g}catch(e){}
-function normalize(){Object.values(hist).forEach(arr=>arr.forEach(e=>{if(!e.id)e.id=uid();if(!e.meal)e.meal="u";if(!e.at)e.at=e.t||0}))}
+function normalize(){Object.values(hist).forEach(arr=>arr.forEach((e,i)=>{if(!e.id)e.id=uid();if(!e.meal)e.meal="u";if(!e.at)e.at=i+1}))}
 normalize();
 const now=()=>Date.now();
 const touch=o=>{o.t=now();return o};
@@ -614,13 +643,14 @@ document.querySelectorAll(".sheet").forEach(s=>{
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openSheetEl)closeSheet()});
 
 /* ---------- add sheet ---------- */
+let editEntry=null;
 function openAdd(meal){
-  if(meal)mealSel=meal;
+  editEntry=null;if(meal)mealSel=meal;
   $("aSearch").value="";showAddList();openSheet("sh-add");
 }
 function showAddList(){
   $("addList").hidden=false;$("addAmt").hidden=true;$("addBack").hidden=true;
-  $("addTitle").textContent=curDate===todayKey()?"Добавить":"Добавить в "+parseKey(curDate).toLocaleDateString("ru-RU",{day:"numeric",month:"short"});
+  $("addTitle").textContent=editEntry?"Заменить продукт":curDate===todayKey()?"Добавить":"Добавить в "+parseKey(curDate).toLocaleDateString("ru-RU",{day:"numeric",month:"short"});
   renderAddList();
 }
 function filterProds(q){q=q.trim().toLowerCase();return prods.filter(p=>!q||p.name.toLowerCase().includes(q)||(p.brand||"").toLowerCase().includes(q)||(p.barcode||"").includes(q))}
@@ -632,14 +662,21 @@ function renderAddList(){
 }
 $("aSearch").oninput=renderAddList;
 $("addBack").onclick=showAddList;
-function showAmount(id){
+function showAmount(id,pre){
   sel=id;const p=cur();if(!p)return;
-  $("addList").hidden=true;$("addAmt").hidden=false;$("addBack").hidden=false;$("addTitle").textContent="Сколько съел";
+  $("addList").hidden=true;$("addAmt").hidden=false;$("addBack").hidden=false;$("addTitle").textContent=editEntry?"Изменить запись":"Сколько съел";
+  $("addBtn").textContent=editEntry?"Сохранить":"Добавить";const del=$("entryDel");del.hidden=!editEntry;del.classList.remove("armed");del.textContent="Удалить запись";
   $("selThumb").outerHTML=thumbHTML(p).replace('class="thumb"','class="thumb" id="selThumb"');
   $("selName").textContent=p.name+(p.brand?` · ${p.brand}`:"");
   $("per").innerHTML=`На 100 г: ${fmt(p.k)} ккал · б ${fmt(p.p)} · ж ${fmt(p.f)} · у ${fmt(p.c)}`;
   $("unit").innerHTML=p.units.map((u,i)=>`<option value="${i}">${esc(u[0])}</option>`).join("");
   $("amt").value=p.units[0][1]===1?100:1;
+  if(pre){ // редактирование: восстанавливаем количество
+    let ui=pre.u?p.units.findIndex(u=>u[0]===pre.u&&(!pre.ug||u[1]===pre.ug)):-1;
+    if(ui>=0&&pre.a>0){$("unit").value=ui;$("amt").value=r1(pre.a)}
+    else{ui=p.units.findIndex(u=>u[1]===1);if(ui<0){p.units.push(["г",1]);ui=p.units.length-1;$("unit").innerHTML=p.units.map((u,i)=>`<option value="${i}">${esc(u[0])}</option>`).join("")}
+      $("unit").value=ui;$("amt").value=r1(pre.g)}
+  }
   renderFrac();renderMealPick();preview();
   $("addAmt").scrollTop=0;
 }
@@ -657,7 +694,7 @@ function renderMealPick(){
 function calc(){
   const p=cur();if(!p)return null;const u=p.units[$("unit").value],a=num($("amt").value);
   if(!(a>0))return null;const g=a*u[1],m=g/100;
-  return {g,k:p.k*m,p:p.p*m,f:p.f*m,c:p.c*m,label:`${fmt(a)} × ${u[0]}`.replace(/^1 × /,"").replace(/ × г$/," г")};
+  return {g,k:p.k*m,p:p.p*m,f:p.f*m,c:p.c*m,a,u:u[0],ug:u[1],label:`${fmt(a)} × ${u[0]}`.replace(/^1 × /,"").replace(/ × г$/," г")};
 }
 function preview(){
   const c=calc()||{k:0,p:0,f:0,c:0};
@@ -666,9 +703,34 @@ function preview(){
 }
 $("amt").oninput=preview;
 $("unit").onchange=()=>{const u=cur().units[$("unit").value];$("amt").value=u[1]===1?100:1;renderFrac();preview()};
-$("addBtn").onclick=()=>{const c=calc();if(!c)return;dayLog().push({id:uid(),meal:mealSel,name:cur().name,...c,at:now(),t:now()});save();renderDay();closeSheet();toast(`Добавлено: ${fmt(c.k)} ккал`)};
-$("mf").onsubmit=e=>{e.preventDefault();const k=num($("mf-k").value)||0,p=num($("mf-p").value)||0;if(!k&&!p)return;
-  dayLog().push({id:uid(),meal:mealSel,name:"Вручную",label:"",k,p,f:0,c:0,at:now(),t:now()});$("mf").reset();save();renderDay();closeSheet();toast("Добавлено")};
+$("addBtn").onclick=()=>{const c=calc();if(!c)return;
+  if(editEntry){const e=editEntry;if(e.meal!==mealSel){e.meal=mealSel;e.at=now()}Object.assign(e,{name:cur().name,pid:cur().id,...c});touch(e);editEntry=null;save();renderDay();closeSheet();toast("Запись изменена");return}
+  dayLog().push({id:uid(),meal:mealSel,name:cur().name,pid:cur().id,...c,at:now(),t:now()});save();renderDay();closeSheet();toast(`Добавлено: ${fmt(c.k)} ккал`)};
+$("entryDel").onclick=()=>{const b=$("entryDel");
+  if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Точно удалить?";return}
+  removeEntry(editEntry.id);editEntry=null;closeSheet();toast("Запись удалена")};
+function removeEntry(id){bury(id);hist[curDate]=dayLog().filter(e=>e.id!==id);save();renderDay()}
+$("mf").onsubmit=e=>{e.preventDefault();const v=id=>num($(id).value)||0,k=v("mf-k"),p=v("mf-p"),f=v("mf-f"),c=v("mf-c");if(!k&&!p&&!f&&!c)return;
+  dayLog().push({id:uid(),meal:mealSel,name:$("mf-n").value.trim()||"Вручную",label:"",k,p,f,c,at:now(),t:now()});$("mf").reset();save();renderDay();closeSheet();toast("Добавлено")};
+/* редактирование записи дня */
+let emeal="u",editManual=null;
+function openEntry(id){
+  const e=dayLog().find(x=>x.id===id);if(!e)return;
+  const p=(e.pid&&prods.find(x=>x.id===e.pid))||prods.find(x=>x.name===e.name);
+  if(p&&e.g>0){editEntry=e;mealSel=e.meal;openSheet("sh-add");showAmount(p.id,e);return}
+  editManual=e;emeal=e.meal;
+  $("ef-n").value=e.name||"";["k","p","f","c"].forEach(k=>$("ef-"+k).value=e[k]?r1(e[k]):"");
+  renderEMeal();const d=$("efDel");d.classList.remove("armed");d.textContent="Удалить запись";
+  openSheet("sh-entry");
+}
+function renderEMeal(){$("emealPick").innerHTML="";MEALS.forEach(([id,name])=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=name;
+  b.setAttribute("aria-pressed",id===emeal);b.onclick=()=>{emeal=id;renderEMeal()};$("emealPick").append(b)})}
+$("ef").onsubmit=ev=>{ev.preventDefault();const e=editManual;if(!e)return;const v=id=>num($(id).value)||0;
+  if(e.meal!==emeal){e.meal=emeal;e.at=now()}
+  Object.assign(e,{name:$("ef-n").value.trim()||"Вручную",k:v("ef-k"),p:v("ef-p"),f:v("ef-f"),c:v("ef-c")});
+  if(e.g>0&&!e.pid)e.label=e.label||"";touch(e);editManual=null;save();renderDay();closeSheet();toast("Запись изменена")};
+$("efDel").onclick=()=>{const b=$("efDel");if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Точно удалить?";return}
+  removeEntry(editManual.id);editManual=null;closeSheet();toast("Запись удалена")};
 $("fabAdd").onclick=()=>openAdd();
 
 /* ---------- today ---------- */
@@ -690,16 +752,17 @@ function renderDay(){
 function renderMeals(){
   const log=hist[curDate]||[],M=$("meals");M.innerHTML="";
   MEALS.forEach(([id,name])=>{
-    const items=log.filter(e=>e.meal===id);
+    const items=log.filter(e=>e.meal===id).sort((a,b)=>(a.at||0)-(b.at||0));
     if(id==="u"&&!items.length)return;
     const s=sum(items),box=document.createElement("div");
     box.className="meal "+id;box.dataset.meal=id;
     box.innerHTML=`<div class="mh"><div class="mt"><b>${name}</b><span class="ms">${items.length?`${fmt(s.k)} ккал · б ${fmt(s.p)} г`:id==="u"?"перетащи в нужный приём":"пусто"}</span></div>${id==="u"?"":`<button class="plus" type="button" aria-label="Добавить в ${name}">+</button>`}</div>`+
-      (items.length?`<ul class="log">${items.map(e=>`<li data-id="${e.id}"><button class="handle" type="button" aria-label="Перетащить">⋮⋮</button><div class="n"><div>${esc(e.name)}</div><span>${esc(e.label||"")}</span></div><div class="v">${fmt(e.k)} ккал<span>б ${fmt(e.p)} г</span></div><button class="x" type="button" aria-label="Удалить">×</button></li>`).join("")}</ul>`:"");
+      (items.length?`<ul class="log">${items.map(e=>`<li data-id="${e.id}"><button class="handle" type="button" aria-label="Перетащить">⋮⋮</button><div class="n" role="button" tabindex="0" aria-label="Изменить: ${esc(e.name)}"><div>${esc(e.name)}</div><span>${esc(e.label||"")}</span></div><div class="v">${fmt(e.k)} ккал<span>б ${fmt(e.p)} г</span></div><button class="x" type="button" aria-label="Удалить">×</button></li>`).join("")}</ul>`:"");
     const pl=box.querySelector(".plus");if(pl)pl.onclick=()=>openAdd(id);
     M.append(box);
   });
-  M.querySelectorAll(".x").forEach(b=>b.onclick=()=>{const id=b.closest("li").dataset.id;bury(id);hist[curDate]=dayLog().filter(e=>e.id!==id);save();renderDay()});
+  M.querySelectorAll(".x").forEach(b=>b.onclick=()=>removeEntry(b.closest("li").dataset.id));
+  M.querySelectorAll(".log .n").forEach(n=>{const go=()=>openEntry(n.closest("li").dataset.id);n.onclick=go;n.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   M.querySelectorAll(".handle").forEach(h=>h.addEventListener("pointerdown",startDrag));
 }
 function shiftDay(n){const d=parseKey(curDate);d.setDate(d.getDate()+n);const k=key(d);if(k>todayKey())return;curDate=k;
@@ -726,10 +789,16 @@ function startDrag(e){
   requestAnimationFrame(autoScroll);
 }
 function moveDrag(e){if(!drag)return;drag.y=e.clientY;drag.x=e.clientX;drag.g.style.top=(e.clientY-drag.dy)+"px";hitTest()}
+function clearIns(){document.querySelectorAll(".ins-before").forEach(x=>x.classList.remove("ins-before"));document.querySelectorAll(".ins-end").forEach(x=>x.classList.remove("ins-end"))}
 function hitTest(){
   const el=document.elementFromPoint(drag.x,drag.y),m=el&&el.closest(".meal");
   document.querySelectorAll(".meal.hot").forEach(x=>x!==m&&x.classList.remove("hot"));
-  if(m)m.classList.add("hot");drag.target=m?m.dataset.meal:null;
+  clearIns();drag.before=null;
+  if(m){m.classList.add("hot");
+    const lis=[...m.querySelectorAll(".log li")].filter(li=>li!==drag.li);
+    const b=lis.find(li=>{const r=li.getBoundingClientRect();return drag.y<r.top+r.height/2});
+    if(b){b.classList.add("ins-before");drag.before=b.dataset.id}else if(lis.length)m.querySelector(".log").classList.add("ins-end");}
+  drag.target=m?m.dataset.meal:null;
 }
 function autoScroll(){
   if(!drag)return;const top=80,bottom=innerHeight-140,y=drag.y;
@@ -739,10 +808,17 @@ function autoScroll(){
 function cleanupDrag(){
   window.removeEventListener("pointermove",moveDrag);window.removeEventListener("pointerup",endDrag);window.removeEventListener("pointercancel",cancelDrag);
   if(drag){drag.g.remove();drag.li.classList.remove("dragging")}
-  document.querySelectorAll(".meal.hot").forEach(x=>x.classList.remove("hot"));
+  document.querySelectorAll(".meal.hot").forEach(x=>x.classList.remove("hot"));clearIns();
 }
 function endDrag(){const d=drag;cleanupDrag();drag=null;
-  if(d&&d.target){const e=dayLog().find(x=>x.id===d.id);if(e&&e.meal!==d.target){e.meal=d.target;touch(e);save()}}renderDay()}
+  if(d&&d.target){const log=dayLog(),e=log.find(x=>x.id===d.id);
+    if(e){const items=log.filter(x=>x.meal===d.target&&x.id!==e.id).sort((a,b)=>(a.at||0)-(b.at||0));
+      const idx=d.before?Math.max(0,items.findIndex(x=>x.id===d.before)):items.length,prev=items[idx-1],next=items[idx];
+      const nat=prev&&next?((prev.at||0)+(next.at||0))/2:prev?(prev.at||0)+1:next?(next.at||0)-1:now();
+      const curOrder=log.filter(x=>x.meal===e.meal).sort((a,b)=>(a.at||0)-(b.at||0)),wasIdx=curOrder.findIndex(x=>x.id===e.id);
+      const same=e.meal===d.target&&curOrder[wasIdx-1]===prev&&curOrder[wasIdx+1]===next;
+      if(!same){e.meal=d.target;e.at=nat;touch(e);save()}}}
+  renderDay()}
 function cancelDrag(){cleanupDrag();drag=null;renderDay()}
 
 /* ---------- products tab ---------- */
