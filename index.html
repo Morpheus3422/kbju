@@ -189,7 +189,8 @@ textarea{min-height:90px;font-size:13px}
 .goal-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 
 /* sheets */
-.sheet{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.sheet{position:fixed;inset:0 0 var(--kb,0px) 0;z-index:100;display:flex;align-items:flex-end;justify-content:center;transition:bottom .15s}
+body.kbopen .sheet .sbody{padding-bottom:16px}
 .sheet .scrim{position:absolute;inset:0;background:var(--scrim);opacity:0;transition:opacity .22s}
 .sheet.open .scrim{opacity:1}
 .sheet .box{position:relative;background:var(--panel);width:100%;max-width:560px;max-height:calc(100% - env(safe-area-inset-top,0px) - 24px);
@@ -829,6 +830,16 @@ function setTab(t){
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 
 /* ---------- sheets ---------- */
+// iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
+(()=>{const vv=window.visualViewport;if(!vv)return;
+  const fit=()=>{const kb=Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop));
+    document.documentElement.style.setProperty("--kb",kb+"px");document.body.classList.toggle("kbopen",kb>80)};
+  vv.addEventListener("resize",fit);vv.addEventListener("scroll",fit);fit();
+  // поле ввода в шторке — прокручиваем так, чтобы оно (и подсказки под ним) было видно над клавиатурой
+  document.addEventListener("focusin",e=>{const el=e.target;if(!el.matches||!el.matches("input,textarea,select")||!el.closest(".sheet"))return;
+    const go=()=>{const top=!!el.closest(".addex");el.scrollIntoView({block:top?"start":"center",behavior:"smooth"})};
+    setTimeout(go,320);setTimeout(go,650)});
+})();
 let openSheetEl=null;
 function openSheet(id){
   if(openSheetEl&&openSheetEl.id!==id)closeSheet(true);
