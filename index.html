@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Калории и белок</title>
 <meta name="theme-color" content="#f3f5f1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#141916" media="(prefers-color-scheme: dark)">
@@ -31,7 +31,9 @@
   --okbg:#1f3a2b; --overbg:#43241f; --underbg:#3a2e1d; --drop:#1f3328; --scrim:rgba(0,0,0,.6);
   --bar:rgba(28,35,31,.92); color-scheme:dark}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;touch-action:manipulation}
+/* iPhone приближает страницу, если шрифт поля меньше 16px — держим 16px на телефонах */
+@media (pointer:coarse){input,select,textarea{font-size:16px!important}}
 body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 var(--display);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   padding-top:max(14px,env(safe-area-inset-top,0px));
@@ -829,6 +831,10 @@ function setTab(t){
 }
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 
+/* без зума: запрет щипка и двойного касания */
+["gesturestart","gesturechange","gestureend"].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
+document.addEventListener("touchmove",e=>{if(e.touches.length>1||(e.scale&&e.scale!==1))e.preventDefault()},{passive:false});
+let lastTouchEnd=0;document.addEventListener("touchend",e=>{const t=Date.now();if(t-lastTouchEnd<300&&!e.target.closest("input,textarea,select"))e.preventDefault();lastTouchEnd=t},{passive:false});
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
