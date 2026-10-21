@@ -1,6 +1,6 @@
 // Офлайн-кэш: оболочка приложения и фото продуктов
-const VERSION = "kbju-v18";
-const SHELL = ["./", "./index.html", "./html5-qrcode.min.js", "./manifest.webmanifest",
+const VERSION = "kbju-v19";
+const SHELL = ["./", "./index.html", "./html5-qrcode.min.js", "./plan.js", "./plan-parse.js", "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
@@ -36,5 +36,9 @@ self.addEventListener("fetch", e => {
     }).catch(() => caches.match("./index.html")));
     return;
   }
-  e.respondWith(caches.match(e.request).then(hit => hit || fetch(e.request)));
+  // свои файлы — сначала сеть (свежая версия), без сети — кэш
+  e.respondWith(fetch(e.request, { cache: "no-cache" }).then(res => {
+    if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); }
+    return res;
+  }).catch(() => caches.match(e.request)));
 });
