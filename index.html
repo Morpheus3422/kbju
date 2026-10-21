@@ -834,7 +834,6 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
 /* без зума: запрет щипка и двойного касания */
 ["gesturestart","gesturechange","gestureend"].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener("touchmove",e=>{if(e.touches.length>1||(e.scale&&e.scale!==1))e.preventDefault()},{passive:false});
-let lastTouchEnd=0;document.addEventListener("touchend",e=>{const t=Date.now();if(t-lastTouchEnd<300&&!e.target.closest("input,textarea,select"))e.preventDefault();lastTouchEnd=t},{passive:false});
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
