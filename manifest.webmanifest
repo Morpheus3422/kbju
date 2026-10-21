@@ -1,13 +1,13 @@
 {
-  "name": "Режим",
-  "short_name": "Режим",
+  "name": "Ascend",
+  "short_name": "Ascend",
   "description": "Еда, спорт и план дня в одном приложении",
   "lang": "ru",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#1c211d",
-  "theme_color": "#1c211d",
+  "background_color": "#14171a",
+  "theme_color": "#14171a",
   "icons": [
     {
       "src": "icon-192.png",
