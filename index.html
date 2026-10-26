@@ -85,6 +85,16 @@ h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 .mh .mt{display:flex;flex-direction:column;min-width:0}
 .mh b{font-weight:800;font-size:16px}
 .mh .ms{font:500 12px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.mbtns{display:flex;gap:6px;align-items:center;flex:none}
+.mmore{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-size:17px;line-height:1;cursor:pointer}
+.mpaste{height:34px;border-radius:999px;border:1px dashed var(--prot);background:var(--drop);color:var(--prot);font:700 12px var(--display);padding:0 10px;cursor:pointer;white-space:nowrap}
+.mmenu{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.mmenu button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 10px;font:600 13px var(--display);color:var(--fg);cursor:pointer}
+.mmenu button.del{color:var(--bad)}
+.clipbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;background:var(--drop);border:1px solid var(--prot);border-radius:14px;padding:10px 12px}
+.clipbar b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clipbar span{font-size:12px;color:var(--muted)}
+.dayacts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .plus{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--bg);font-size:20px;line-height:1;cursor:pointer;flex:none;color:var(--prot);font-weight:700}
 .log{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column}
 .log li{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
@@ -536,8 +546,9 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
       <div class="fc">Жиры <b class="num" id="tf">0</b> г · Углеводы <b class="num" id="tc">0</b> г</div>
     </div>
     <div id="dayWork" class="view" style="gap:8px"></div>
+    <div id="clipBar"></div>
     <div class="view" id="meals"></div>
-    <button class="ghost" id="reset" type="button" style="align-self:center">Очистить день</button>
+    <div class="dayacts"><button class="ghost" id="copyDay" type="button">Копировать день</button><button class="ghost" id="reset" type="button">Очистить день</button></div>
   </section>
 
   <!-- TAB: products -->
@@ -1140,7 +1151,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=27;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
+const APP_VERSION=28;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -1295,7 +1306,7 @@ function renderDay(){
     l.innerHTML=dd>=0?`ещё <b class="num">${fmt(dd)}</b> · ${Math.round(t[k]/GOAL[k]*100)}%`:`перебор <b class="num">${fmt(-dd)}</b>`;
   });
   $("tf").textContent=fmt(t.f);$("tc").textContent=fmt(t.c);
-  $("reset").hidden=!(hist[curDate]&&hist[curDate].length);
+  $("reset").hidden=!(hist[curDate]&&hist[curDate].length);$("copyDay").hidden=$("reset").hidden;
   renderMeals();
 }
 function renderDayWork(){
@@ -1303,7 +1314,25 @@ function renderDayWork(){
   W.innerHTML=ss.map(s=>{const its=s.items.filter(i=>setsOf(i).length);return `<button class="wcard" type="button" data-id="${esc(s.id)}"><div class="ic">${DB}</div><div style="min-width:0"><b>${esc(s.name||"Тренировка")}</b><span>${its.length} упр. · ${esc(its.map(i=>i.name).join(", "))}</span></div><span class="go">Открыть ›</span></button>`}).join("");
   W.querySelectorAll(".wcard").forEach(b=>b.onclick=()=>openWorkout(b.dataset.id));
 }
+/* ---------- копирование приёмов пищи ---------- */
+let mealMenu=null,mealClip=null;
+try{mealClip=JSON.parse(localStorage.getItem("kbju-mealclip"))}catch(e){}
+const MEAL_NAME=Object.fromEntries(MEALS);
+function addDay(k,n){const d=parseKey(k);d.setDate(d.getDate()+n);return key(d)}
+function setClip(c){mealClip={kind:c.kind,from:c.from,meal:c.meal||null,items:c.items.map(e=>{const{ id,t,at,...rest}=e;return rest})};
+  try{localStorage.setItem("kbju-mealclip",JSON.stringify(mealClip))}catch(e){}renderDay()}
+function clearClip(){mealClip=null;try{localStorage.removeItem("kbju-mealclip")}catch(e){}renderDay()}
+function pasteItems(items,date,mealFor){const arr=hist[date]||(hist[date]=[]);let at=now();
+  items.forEach(e=>{const{ id,t,...rest}=e;arr.push({...rest,id:uid(),meal:mealFor(e),at:at++,t:now()})});save()}
+function pasteClip(target){if(!mealClip)return;const c=mealClip;
+  pasteItems(c.items,curDate,e=>c.kind==="day"?(e.meal||"u"):target);renderDay();
+  const n=c.items.length;toast(c.kind==="day"?`Вставлен день: ${n} ${n===1?"продукт":n<5?"продукта":"продуктов"}`:`Вставлено в «${MEAL_NAME[target]}»: ${n}`)}
+function renderClipBar(){const B=$("clipBar");if(!mealClip){B.innerHTML="";return}
+  const c=mealClip,k=c.items.reduce((a,e)=>a+e.k,0),title=c.kind==="day"?"Весь день":MEAL_NAME[c.meal]||"Приём пищи";
+  B.innerHTML=`<div class="clipbar"><div style="min-width:0"><b>Скопировано: ${esc(title)} · ${shortDate(c.from)}</b><span>${c.items.length} шт. · ${fmt(Math.round(k))} ккал${c.kind==="meal"?" · нажми «Вставить» у нужного приёма":""}</span></div>${c.kind==="day"?`<button class="btn go sm" type="button" id="clipPasteDay">Вставить</button>`:`<span></span>`}<button class="x" type="button" id="clipX" aria-label="Очистить буфер">×</button></div>`;
+  const pd=$("clipPasteDay");if(pd)pd.onclick=()=>pasteClip(null);$("clipX").onclick=clearClip}
 function renderMeals(){
+  renderClipBar();
   if(typeof renderDayWork==="function")renderDayWork();
   const log=hist[curDate]||[],M=$("meals");M.innerHTML="";
   MEALS.forEach(([id,name])=>{
@@ -1311,9 +1340,19 @@ function renderMeals(){
     if(id==="u"&&!items.length)return;
     const s=sum(items),box=document.createElement("div");
     box.className="meal "+id;box.dataset.meal=id;
-    box.innerHTML=`<div class="mh"><div class="mt"><b>${name}</b><span class="ms">${items.length?`${fmt(s.k)} ккал · б ${fmt(s.p)} г`:id==="u"?"перетащи в нужный приём":"пусто"}</span></div>${id==="u"?"":`<button class="plus" type="button" aria-label="Добавить в ${name}">+</button>`}</div>`+
+    const canPaste=mealClip&&id!=="u";
+    box.innerHTML=`<div class="mh"><div class="mt"><b>${name}</b><span class="ms">${items.length?`${fmt(s.k)} ккал · б ${fmt(s.p)} г`:id==="u"?"перетащи в нужный приём":"пусто"}</span></div><div class="mbtns">${canPaste?`<button class="mpaste" type="button" aria-label="Вставить скопированное в ${name}">Вставить</button>`:""}${items.length?`<button class="mmore" type="button" aria-label="Действия: ${name}" aria-expanded="${mealMenu===id}">⋯</button>`:""}${id==="u"?"":`<button class="plus" type="button" aria-label="Добавить в ${name}">+</button>`}</div></div>`+
+      (mealMenu===id&&items.length?`<div class="mmenu"><button type="button" data-mm="copy">Копировать «${name}»</button>${id!=="u"?`<button type="button" data-mm="tomorrow">Повторить завтра</button>`:""}<button type="button" class="del" data-mm="clear">Очистить</button></div>`:"")+
       (items.length?`<ul class="log">${items.map(e=>`<li data-id="${e.id}"><button class="handle" type="button" aria-label="Перетащить">⋮⋮</button><div class="n" role="button" tabindex="0" aria-label="Изменить: ${esc(e.name)}"><div>${esc(e.name)}</div><span>${esc(e.label||"")}</span></div><div class="v">${fmt(e.k)} ккал<span>б ${fmt(e.p)} г</span></div><button class="x" type="button" aria-label="Удалить">×</button></li>`).join("")}</ul>`:"");
     const pl=box.querySelector(".plus");if(pl)pl.onclick=()=>openAdd(id);
+    const mm=box.querySelector(".mmore");if(mm)mm.onclick=()=>{mealMenu=mealMenu===id?null:id;renderMeals()};
+    const mp=box.querySelector(".mpaste");if(mp)mp.onclick=()=>pasteClip(id);
+    box.querySelectorAll("[data-mm]").forEach(b=>b.onclick=()=>{const a=b.dataset.mm;mealMenu=null;
+      if(a==="copy"){setClip({kind:"meal",from:curDate,meal:id,items});toast(`Скопировано: ${name}. Открой нужный день и нажми «Вставить»`)}
+      else if(a==="tomorrow"){const t=addDay(curDate,1);pasteItems(items,t,()=>id);toast(`${name} добавлен на ${shortDate(t)}`)}
+      else if(a==="clear"){if(b.dataset.armed){items.forEach(e=>bury(e.id));hist[curDate]=dayLog().filter(e=>e.meal!==id);save();renderDay();return}
+        b.dataset.armed="1";b.textContent="Точно очистить?";mealMenu=id;return}
+      renderDay()});
     M.append(box);
   });
   M.querySelectorAll(".x").forEach(b=>b.onclick=()=>removeEntry(b.closest("li").dataset.id));
@@ -1325,6 +1364,7 @@ function shiftDay(n){const d=parseKey(curDate);d.setDate(d.getDate()+n);const k=
 $("prevDay").onclick=()=>shiftDay(-1);
 $("nextDay").onclick=()=>shiftDay(1);
 $("toToday").onclick=()=>{curDate=todayKey();disarm();renderDay()};
+$("copyDay").onclick=()=>{const l=hist[curDate]||[];if(!l.length){toast("В этом дне пока пусто");return}setClip({kind:"day",from:curDate,items:l});toast("День скопирован. Открой нужный день и нажми «Вставить»")};
 function disarm(){const b=$("reset");b.classList.remove("armed");b.textContent="Очистить день"}
 $("reset").onclick=()=>{const b=$("reset");
   if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Точно очистить?";setTimeout(disarm,4000);return}
