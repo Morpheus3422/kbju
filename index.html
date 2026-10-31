@@ -1153,7 +1153,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=29;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
+const APP_VERSION=30;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -1235,17 +1235,28 @@ function showAmount(id,pre){
   $("amt").value=p.units[0][1]===1?100:1;
   if(pre){ // редактирование: восстанавливаем количество
     let ui=pre.u?p.units.findIndex(u=>u[0]===pre.u&&(!pre.ug||u[1]===pre.ug)):-1;
-    if(ui>=0&&pre.a>0){$("unit").value=ui;$("amt").value=r1(pre.a)}
+    if(ui>=0&&pre.a>0){$("unit").value=ui;$("amt").value=p.units[ui][1]===1?r1(pre.a):qtyText(pre.a,true)}
     else{ui=p.units.findIndex(u=>u[1]===1);if(ui<0){p.units.push(["г",1]);ui=p.units.length-1;$("unit").innerHTML=p.units.map((u,i)=>`<option value="${i}">${esc(u[0])}</option>`).join("")}
       $("unit").value=ui;$("amt").value=r1(pre.g)}
   }
   renderFrac();renderMealPick();preview();
   $("addAmt").scrollTop=0;
 }
+/* количество дробями: ½ ⅓ ¼ */
+const FRAC=[[1/4,"¼","1/4"],[1/3,"⅓","1/3"],[1/2,"½","1/2"],[2/3,"⅔","2/3"],[3/4,"¾","3/4"]];
+function parseQty(s){s=String(s??"").trim().replace(/,/g,".");let m;
+  if((m=s.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/)))return +m[1]+(+m[3]?+m[2]/+m[3]:0);
+  if((m=s.match(/^(\d*\.?\d+)\s*\/\s*(\d+)$/)))return +m[2]?+m[1]/+m[2]:NaN;
+  for(const f of FRAC){if(s===f[1])return f[0];if(s.endsWith(f[1])&&/^\d+$/.test(s.slice(0,-1)))return +s.slice(0,-1)+f[0]}
+  return parseFloat(s)}
+function qtyText(a,forInput){if(!(a>0))return "";const w=Math.floor(a+1e-9),fr=a-w,f=fr>0.01?FRAC.find(x=>Math.abs(x[0]-fr)<0.01):null;
+  if(f)return w?(forInput?w+" "+f[2]:w+f[1]):(forInput?f[2]:f[1]);
+  return String(Math.round(a*100)/100).replace(".",",")}
+function entryLabel(e){if(e.a>0&&e.u)return e.u==="г"&&e.ug===1?`${fmt(e.a)} г`:(Math.abs(e.a-1)<1e-9?e.u:`${qtyText(e.a)} × ${e.u}`);return e.label||""}
 function renderFrac(){
   const u=cur().units[$("unit").value];
-  const opts=u[1]===1?[50,100,150,200]:[0.25,0.5,0.75,1,2,3];
-  $("frac").innerHTML=opts.map(v=>`<button class="btn" type="button" data-v="${v}">${u[1]===1?v+" г":({0.25:"¼",0.5:"½",0.75:"¾"}[v]||v)}</button>`).join("");
+  const opts=u[1]===1?[[50,"50 г"],[100,"100 г"],[150,"150 г"],[200,"200 г"]]:[["1/2","½"],["1/3","⅓"],["1/4","¼"],[1,"1"],[2,"2"],[3,"3"],[4,"4"]];
+  $("frac").innerHTML=opts.map(([v,t])=>`<button class="btn" type="button" data-v="${v}">${t}</button>`).join("");
   $("frac").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("amt").value=b.dataset.v;preview()});
 }
 function renderMealPick(){
@@ -1254,9 +1265,10 @@ function renderMealPick(){
     b.setAttribute("aria-pressed",id===mealSel);b.onclick=()=>{mealSel=id;renderMealPick()};$("mealPick").append(b)});
 }
 function calc(){
-  const p=cur();if(!p)return null;const u=p.units[$("unit").value],a=num($("amt").value);
+  const p=cur();if(!p)return null;const u=p.units[$("unit").value],a=parseQty($("amt").value);
   if(!(a>0))return null;const g=a*u[1],m=g/100;
-  return {g,k:p.k*m,p:p.p*m,f:p.f*m,c:p.c*m,a,u:u[0],ug:u[1],label:`${fmt(a)} × ${u[0]}`.replace(/^1 × /,"").replace(/ × г$/," г")};
+  const e={a,u:u[0],ug:u[1]};
+  return {g,k:p.k*m,p:p.p*m,f:p.f*m,c:p.c*m,a,u:u[0],ug:u[1],label:entryLabel(e)};
 }
 function preview(){
   const c=calc()||{k:0,p:0,f:0,c:0};
@@ -1345,7 +1357,7 @@ function renderMeals(){
     const canPaste=mealClip&&id!=="u";
     box.innerHTML=`<div class="mh"><div class="mt"><b>${name}</b><span class="ms">${items.length?`${fmt(s.k)} ккал · б ${fmt(s.p)} г`:id==="u"?"перетащи в нужный приём":"пусто"}</span></div><div class="mbtns">${canPaste?`<button class="mpaste" type="button" aria-label="Вставить скопированное в ${name}">Вставить</button>`:""}${items.length?`<button class="mmore" type="button" aria-label="Действия: ${name}" aria-expanded="${mealMenu===id}">⋯</button>`:""}${id==="u"?"":`<button class="plus" type="button" aria-label="Добавить в ${name}">+</button>`}</div></div>`+
       (mealMenu===id&&items.length?`<div class="mmenu"><button type="button" data-mm="copy">Копировать «${name}»</button>${id!=="u"?(curDate!==todayKey()?`<button type="button" data-mm="today">Добавить в сегодня</button>`:`<button type="button" data-mm="tomorrow">Повторить завтра</button>`):""}<button type="button" class="del" data-mm="clear">Очистить</button></div>`:"")+
-      (items.length?`<ul class="log">${items.map(e=>`<li data-id="${e.id}"><button class="handle" type="button" aria-label="Перетащить">⋮⋮</button><div class="n" role="button" tabindex="0" aria-label="Изменить: ${esc(e.name)}"><div>${esc(e.name)}</div><span>${esc(e.label||"")}</span></div><div class="v">${fmt(e.k)} ккал<span>б ${fmt(e.p)} г</span></div><button class="x" type="button" aria-label="Удалить">×</button></li>`).join("")}</ul>`:"");
+      (items.length?`<ul class="log">${items.map(e=>`<li data-id="${e.id}"><button class="handle" type="button" aria-label="Перетащить">⋮⋮</button><div class="n" role="button" tabindex="0" aria-label="Изменить: ${esc(e.name)}"><div>${esc(e.name)}</div><span>${esc(entryLabel(e))}</span></div><div class="v">${fmt(e.k)} ккал<span>б ${fmt(e.p)} г</span></div><button class="x" type="button" aria-label="Удалить">×</button></li>`).join("")}</ul>`:"");
     const pl=box.querySelector(".plus");if(pl)pl.onclick=()=>openAdd(id);
     const mm=box.querySelector(".mmore");if(mm)mm.onclick=()=>{mealMenu=mealMenu===id?null:id;renderMeals()};
     const mp=box.querySelector(".mpaste");if(mp)mp.onclick=()=>pasteClip(id);
