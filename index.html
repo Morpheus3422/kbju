@@ -429,9 +429,22 @@ details.pgroup>summary{cursor:pointer}
 .glive b{display:block;font-size:16px;font-weight:800}
 .glive span{font-size:12px;opacity:.85}
 .glive em{font-style:normal;font:700 14px var(--display);background:rgba(255,255,255,.2);border-radius:999px;padding:8px 12px}
+/* ===== графики ===== */
+.chartp{padding:12px 12px 10px;gap:6px}
+.chh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.chh b{font-size:14px}
+.chh span{font:500 12px var(--mono);color:var(--muted)}
+.chh .upc{color:#3f8a3f}.chh .dnc{color:var(--bad)}
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.chart .ct{font:500 10px var(--mono);fill:var(--muted)}
+.cwrap{position:relative;touch-action:pan-y}
+.clegend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:2px}
+.clegend i,.ctip i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:3px}
+.ctip{position:absolute;top:-6px;transform:translateY(-100%);background:var(--fg);color:var(--panel);border-radius:10px;padding:7px 10px;font-size:12px;display:flex;flex-direction:column;gap:2px;pointer-events:none;white-space:nowrap;box-shadow:0 6px 16px rgba(0,0,0,.2);z-index:3}
+.ctip em{font-style:normal;opacity:.75;font-family:var(--mono)}
 /* ===== Зал: коричневая тема ===== */
-body.gym{--bg:#f4eee7;--panel:#fffaf5;--fg:#2c2119;--muted:#7d6b5d;--line:#e7dacb;--prot:#8a5a3b;--chip:#f0e5d9;--track:#eadfd3;--drop:#f1e3d3;--bar:rgba(255,250,245,.92);--okbg:#ecdcc8;--kcal:#b5733f;--gold:#b98a4e}
-@media (prefers-color-scheme:dark){body.gym{--bg:#191411;--panel:#231c17;--fg:#f2e8de;--muted:#a99686;--line:#3a2e26;--prot:#c98a5c;--chip:#2e251f;--track:#33291f;--drop:#30251c;--bar:rgba(35,28,23,.92);--okbg:#3b2d22;--kcal:#d79a63;--gold:#d9a866}}
+body.gym{--s1:#9c4f24;--s2:#2f74b5;--s3:#2f8a5e;--bg:#f4eee7;--panel:#fffaf5;--fg:#2c2119;--muted:#7d6b5d;--line:#e7dacb;--prot:#8a5a3b;--chip:#f0e5d9;--track:#eadfd3;--drop:#f1e3d3;--bar:rgba(255,250,245,.92);--okbg:#ecdcc8;--kcal:#b5733f;--gold:#b98a4e}
+@media (prefers-color-scheme:dark){body.gym{--s1:#c96a3a;--s2:#3f8fd0;--s3:#3aa36a;--bg:#191411;--panel:#231c17;--fg:#f2e8de;--muted:#a99686;--line:#3a2e26;--prot:#c98a5c;--chip:#2e251f;--track:#33291f;--drop:#30251c;--bar:rgba(35,28,23,.92);--okbg:#3b2d22;--kcal:#d79a63;--gold:#d9a866}}
 body{transition:background .25s}
 .gsum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .gsum div{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -1158,7 +1171,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=32;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
+const APP_VERSION=33;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -1890,16 +1903,18 @@ function parseWorkoutNote(text,defUnit){
 }
 // последний результат упражнения (кроме текущей тренировки)
 function lastOf(name,exceptId){
-  const k=exKey(name);
-  for(const s of [...gym.sessions].sort(sessSort)){if(s.id===exceptId)continue;
+  const k=exKey(name),ref=exceptId?gym.sessions.find(x=>x.id===exceptId):null;
+  for(const s of [...gym.sessions].sort(sessSort)){if(s.id===exceptId||!isBefore({date:s.date,at:s.at},ref))continue;
     const it=(s.items||[]).find(i=>exKey(i.name)===k&&setsOf(i).length);if(it)return {date:s.date,w:it.w,unit:it.unit,sets:setsOf(it),sid:s.id}}
   return null;
 }
 function exHistory(name){
   const k=exKey(name),out=[];
-  for(const s of [...gym.sessions].sort(sessSort)){(s.items||[]).forEach(it=>{if(exKey(it.name)===k&&setsOf(it).length)out.push({date:s.date,w:it.w,unit:it.unit,sets:setsOf(it),sid:s.id})})}
+  for(const s of [...gym.sessions].sort(sessSort)){(s.items||[]).forEach(it=>{if(exKey(it.name)===k&&setsOf(it).length)out.push({date:s.date,at:s.at||0,w:it.w,unit:it.unit,sets:setsOf(it),sid:s.id})})}
   return out;
 }
+// была ли запись раньше тренировки ref (по дате, внутри дня — по времени создания)
+function isBefore(h,ref){if(!ref)return true;return h.date<ref.date||(h.date===ref.date&&(h.at||0)<(ref.at||0))}
 const shortDate=k=>parseKey(k).toLocaleDateString("ru-RU",{day:"numeric",month:"short"});
 function gSaveSoon(){clearTimeout(gSaveSoon.t);gSaveSoon.t=setTimeout(save,500)}
 
@@ -2023,8 +2038,8 @@ function workProgress(){let d=0,t=0;work.items.forEach(it=>{t+=it.sets.length;d+
 function renderWorkMeta(){const [d,t]=workProgress();$("wProg").textContent=t?`${d}/${t} подходов`:"";}
 function newItem(name){const l=lastOf(name,work&&work.id);return {id:uid(),name,unit:l?.unit||gym.unit,w:l?.w||"",sets:Array(Math.max(3,l?.sets.length||0)).fill(null),dn:[]}}
 // лучшая тренировка по упражнению целиком: больше вес, при равном — больше повторов в сумме
-function bestSession(name,exceptId,unit){let best=null;
-  exHistory(name).forEach(h=>{if(h.sid===exceptId||(h.unit||"kg")!==(unit||"kg"))return;const W=wTotal(h.w),R=h.sets.reduce((a,b)=>a+b,0);
+function bestSession(name,exceptId,unit){let best=null;const ref=exceptId?gym.sessions.find(x=>x.id===exceptId):null;
+  exHistory(name).forEach(h=>{if(h.sid===exceptId||(h.unit||"kg")!==(unit||"kg")||!isBefore(h,ref))return;const W=wTotal(h.w),R=h.sets.reduce((a,b)=>a+b,0);
     if(!best||W>best.W||(W===best.W&&R>best.R))best={...h,W,R}});return best}
 const cellOf=(x,i)=>x&&x.sets[i]!=null?(x.w?fmtW(x.w).replace(/ /g,"")+"×":"")+x.sets[i]:"—";
 function renderWork(){
@@ -2041,7 +2056,7 @@ function renderWork(){
     const l=lastOf(it.name,work.id),c=document.createElement("div");c.className="exc";c.dataset.ix=ix;
     const bsRaw=bestSession(it.name,work.id,it.unit),bs=bsRaw&&l&&bsRaw.sid===l.sid?l:bsRaw;
     const [w1,...wr]=String(it.w||"").split("+");const w2=wr.join("+");
-    const hist=exHistory(it.name).filter(h=>h.sid!==work.id&&(h.unit||"kg")===(it.unit||"kg"));
+    const hist=exHistory(it.name).filter(h=>h.sid!==work.id&&(h.unit||"kg")===(it.unit||"kg")&&isBefore(h,work));
     const maxW=hist.reduce((m,h)=>Math.max(m,wTotal(h.w)),0);
     const isPR=maxW>0&&wTotal(it.w)>maxW;
     const done=it.dn.filter(Boolean).length;
@@ -2179,18 +2194,56 @@ function openExHistory(name){
   const h=exHistory(name);$("xhTitle").textContent=name;
   const B=$("xhBody");
   if(!h.length){B.innerHTML=`<div class="empty">Ещё нет записей по этому упражнению</div>`;openSheet("sh-exh");return}
-  const pts=[...h].reverse(),ws=pts.map(x=>wTotal(x.w)),vol=pts.map(x=>wTotal(x.w)*x.sets.reduce((a,b)=>a+b,0));
-  const best=h.reduce((m,x)=>wTotal(x.w)>wTotal(m.w)?x:m,h[0]);
-  const bestVol=Math.max(...vol);
-  let svg="";
-  if(pts.length>1){const W=320,H=90,pad=10,mx=Math.max(...ws),mn=Math.min(...ws),rg=mx-mn||1;
-    const xy=ws.map((v,i)=>[pad+i*(W-2*pad)/(ws.length-1),H-pad-(v-mn)/rg*(H-2*pad)]);
-    const d=xy.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
-    svg=`<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Рабочий вес по тренировкам"><path d="${d} L ${xy[xy.length-1][0]} ${H} L ${xy[0][0]} ${H} Z" fill="var(--chip)" stroke="none"/><path d="${d}" fill="none" stroke="var(--prot)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>${xy.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="${i===xy.length-1?4:2.5}" fill="var(--prot)"/>`).join("")}</svg>`}
-  B.innerHTML=`<div class="gsum"><div><b>${fmtW(best.w)||"—"}</b><span>макс. вес, ${uName(best.unit)}</span></div><div><b>${Math.round(bestVol)}</b><span>макс. объём</span></div><div><b>${h.length}</b><span>тренировок</span></div></div>
-    ${svg?`<div class="panel" style="padding:10px 12px;gap:4px"><span class="hint">Рабочий вес по тренировкам</span>${svg}</div>`:""}
-    <div class="panel" style="padding:4px 14px;gap:0">${h.map(x=>`<div class="hrow"><span class="d">${shortDate(x.date)}</span><span class="w">${x.w?fmtW(x.w)+" "+uName(x.unit):"без веса"}</span><span class="r">${x.sets.join(" ")}</span></div>`).join("")}</div>`;
+  const pts=[...h].reverse(); // от старых к новым
+  // рекорд на момент каждой тренировки: больше вес, при равном — больше повторов
+  let bestSoFar=null;
+  pts.forEach((x,i)=>{const W=wTotal(x.w),R=x.sets.reduce((a,b)=>a+b,0);x.W=W;x.R=R;
+    x.pr=i>0&&(!bestSoFar||W>bestSoFar.W||(W===bestSoFar.W&&R>bestSoFar.R));
+    if(!bestSoFar||W>bestSoFar.W||(W===bestSoFar.W&&R>bestSoFar.R))bestSoFar={W,R,x}});
+  const best=bestSoFar.x,bestVol=Math.max(...pts.map(x=>x.W*x.R));
+  const labels=pts.map(x=>shortDate(x.date)),prCount=pts.filter(x=>x.pr).length;
+  const last=pts[pts.length-1],prev=pts[pts.length-2];
+  const dR=prev?last.R-prev.R:0,sameW=prev&&last.W===prev.W;
+  const nSets=Math.min(3,Math.max(...pts.map(x=>x.sets.length)));
+  const repSeries=[0,1,2].slice(0,nSets).map(i=>({name:`${i+1}-й подход`,color:`var(--s${i+1})`,vals:pts.map(x=>x.sets[i]??null)}));
+  const charts=pts.length>1;
+  B.innerHTML=`<div class="gsum"><div><b>${fmtW(best.w)||"—"}</b><span>рекорд, ${uName(best.unit)} · ${shortDate(best.date)}</span></div><div><b>${prCount}</b><span>раз бил рекорд</span></div><div><b>${h.length}</b><span>тренировок</span></div></div>
+    ${charts?`<div class="panel chartp"><div class="chh"><b>Повторы по подходам</b><span class="${dR>0?"upc":dR<0?"dnc":""}">${prev?`${sameW?"":"вес изменился · "}сумма ${prev.R} → ${last.R}${dR?` (${dR>0?"+":""}${dR})`:""}`:""}</span></div><div class="chart" id="chReps"></div></div>
+      <div class="panel chartp"><div class="chh"><b>Рабочий вес, ${uName(last.unit)}</b><span>${fmtW(pts[0].w)||"0"} → ${fmtW(last.w)||"0"}</span></div><div class="chart" id="chW"></div></div>`:""}
+    <div class="panel" style="padding:4px 14px;gap:0">${[...pts].reverse().map(x=>`<div class="hrow"><span class="d">${shortDate(x.date)}</span><span class="w">${x.w?fmtW(x.w)+" "+uName(x.unit):"без веса"}${x.pr?' <span class="pr">рекорд</span>':""}</span><span class="r">${x.sets.join(" ")}</span></div>`).join("")}</div>`;
+  if(charts){
+    drawChart($("chReps"),{labels,series:repSeries,unit:"повт.",integer:true,extra:i=>`${pts[i].w?fmtW(pts[i].w)+" "+uName(pts[i].unit):"без веса"}`,aria:`Повторы по подходам за ${pts.length} тренировок`});
+    drawChart($("chW"),{labels,series:[{name:"Вес",color:"var(--s1)",vals:pts.map(x=>x.W)}],unit:uName(last.unit),area:true,extra:i=>pts[i].sets.join(" "),aria:"Рабочий вес по тренировкам"});
+  }
   openSheet("sh-exh");
+}
+/* линейный график: одна ось, сетка, подписи, подсказка по касанию */
+function drawChart(el,o){
+  const W=340,H=150,pl=30,pr=10,pt=10,pb=22,n=o.labels.length;
+  const all=o.series.flatMap(s=>s.vals).filter(v=>v!=null);let mn=Math.min(...all),mx=Math.max(...all);
+  if(mx===mn){mx+=1;mn=Math.max(0,mn-1)}
+  if(o.integer){mn=Math.max(0,Math.floor(mn)-1);mx=Math.ceil(mx)+1;if((mx-mn)%2)mx++}
+  else{const st=mx-mn>20?10:5;mn=Math.max(0,Math.floor(mn/st)*st);mx=Math.ceil(mx/st)*st;if(mx===mn)mx+=st}
+  const ticks=[0,0.5,1].map(t=>mn+(mx-mn)*t);
+  const X=i=>pl+(n===1?(W-pl-pr)/2:i*(W-pl-pr)/(n-1)),Y=v=>pt+(1-(v-mn)/(mx-mn))*(H-pt-pb);
+  const tf=v=>o.integer?String(Math.round(v)):fmt(v);
+  let g=ticks.map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${pl-6}" y="${(Y(v)+3.5).toFixed(1)}" text-anchor="end" class="ct">${tf(v)}</text>`).join("");
+  g+=`<text x="${X(0)}" y="${H-6}" text-anchor="start" class="ct">${esc(o.labels[0])}</text>${n>1?`<text x="${X(n-1)}" y="${H-6}" text-anchor="end" class="ct">${esc(o.labels[n-1])}</text>`:""}`;
+  o.series.forEach(s=>{
+    const segs=[];let cur=[];s.vals.forEach((v,i)=>{if(v==null){if(cur.length)segs.push(cur);cur=[]}else cur.push([X(i),Y(v)])});if(cur.length)segs.push(cur);
+    if(o.area&&segs.length){const sg=segs[0];g+=`<path d="M${sg.map(p=>p.map(c=>c.toFixed(1)).join(" ")).join(" L")} L${sg[sg.length-1][0].toFixed(1)} ${H-pb} L${sg[0][0].toFixed(1)} ${H-pb} Z" fill="${s.color}" opacity=".12"/>`}
+    segs.forEach(sg=>{g+=`<path d="M${sg.map(p=>p.map(c=>c.toFixed(1)).join(" ")).join(" L")}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`});
+    s.vals.forEach((v,i)=>{if(v!=null)g+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="${i===n-1?4.5:3.5}" fill="${s.color}" stroke="var(--panel)" stroke-width="1.5"/>`});
+  });
+  const legend=o.series.length>1?`<div class="clegend">${o.series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join("")}</div>`:"";
+  el.innerHTML=`${legend}<div class="cwrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria||"")}">${g}<line class="cx" x1="0" x2="0" y1="${pt}" y2="${H-pb}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/></svg><div class="ctip" hidden></div></div>`;
+  const svg=el.querySelector("svg"),tip=el.querySelector(".ctip"),cx=el.querySelector(".cx"),wrap=el.querySelector(".cwrap");
+  const show=e=>{const r=svg.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W;let i=Math.round((x-pl)/((W-pl-pr)/Math.max(1,n-1)));i=Math.max(0,Math.min(n-1,i));
+    cx.setAttribute("x1",X(i));cx.setAttribute("x2",X(i));cx.setAttribute("visibility","visible");
+    tip.innerHTML=`<b>${esc(o.labels[i])}</b>${o.series.map(s=>s.vals[i]==null?"":`<span><i style="background:${s.color}"></i>${o.series.length>1?esc(s.name)+": ":""}${tf(s.vals[i])} ${esc(o.unit)}</span>`).join("")}${o.extra?`<em>${esc(o.extra(i))}</em>`:""}`;
+    tip.hidden=false;const px=X(i)/W*r.width;tip.style.left=Math.max(4,Math.min(r.width-tip.offsetWidth-4,px-tip.offsetWidth/2))+"px"};
+  wrap.addEventListener("pointermove",show);wrap.addEventListener("pointerdown",show);
+  wrap.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse"){tip.hidden=true;cx.setAttribute("visibility","hidden")}});
 }
 
 /* --- программы --- */
