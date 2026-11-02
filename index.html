@@ -388,7 +388,11 @@ details.pgroup>summary{cursor:pointer}
 .wval .wplus{font:600 15px var(--mono);color:var(--muted)}
 .wval .addx{border:0;background:var(--chip);color:var(--muted);border-radius:8px;font:700 11px var(--display);padding:4px 6px;cursor:pointer;white-space:nowrap}
 .sgrid{display:flex;flex-direction:column;gap:6px}
-.sgh,.sr{display:grid;grid-template-columns:34px minmax(0,1fr) 84px 46px;gap:8px;align-items:center}
+.sgh,.sr{display:grid;grid-template-columns:30px minmax(0,1fr) minmax(0,1fr) 72px 44px;gap:6px;align-items:center}
+.sr .sp{font-size:13px!important}
+.sr .sb,.sgh .bh{color:var(--gold,#b98a4e)!important}
+.exlast .bst{color:var(--gold,#b98a4e)}
+.exlast .bst b{color:var(--gold,#b98a4e)}
 .sgh{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding:0 2px}
 .sgh span:nth-child(3){text-align:center}
 .sr{border-radius:12px;padding:2px;transition:background .2s}
@@ -1154,7 +1158,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=31;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
+const APP_VERSION=32;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -1888,7 +1892,7 @@ function parseWorkoutNote(text,defUnit){
 function lastOf(name,exceptId){
   const k=exKey(name);
   for(const s of [...gym.sessions].sort(sessSort)){if(s.id===exceptId)continue;
-    const it=(s.items||[]).find(i=>exKey(i.name)===k&&setsOf(i).length);if(it)return {date:s.date,w:it.w,unit:it.unit,sets:setsOf(it)}}
+    const it=(s.items||[]).find(i=>exKey(i.name)===k&&setsOf(i).length);if(it)return {date:s.date,w:it.w,unit:it.unit,sets:setsOf(it),sid:s.id}}
   return null;
 }
 function exHistory(name){
@@ -2018,6 +2022,11 @@ const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
 function workProgress(){let d=0,t=0;work.items.forEach(it=>{t+=it.sets.length;d+=(it.dn||[]).filter(Boolean).length});return [d,t]}
 function renderWorkMeta(){const [d,t]=workProgress();$("wProg").textContent=t?`${d}/${t} подходов`:"";}
 function newItem(name){const l=lastOf(name,work&&work.id);return {id:uid(),name,unit:l?.unit||gym.unit,w:l?.w||"",sets:Array(Math.max(3,l?.sets.length||0)).fill(null),dn:[]}}
+// лучшая тренировка по упражнению целиком: больше вес, при равном — больше повторов в сумме
+function bestSession(name,exceptId,unit){let best=null;
+  exHistory(name).forEach(h=>{if(h.sid===exceptId||(h.unit||"kg")!==(unit||"kg"))return;const W=wTotal(h.w),R=h.sets.reduce((a,b)=>a+b,0);
+    if(!best||W>best.W||(W===best.W&&R>best.R))best={...h,W,R}});return best}
+const cellOf=(x,i)=>x&&x.sets[i]!=null?(x.w?fmtW(x.w).replace(/ /g,"")+"×":"")+x.sets[i]:"—";
 function renderWork(){
   const L=$("wList");L.innerHTML="";renderWorkMeta();
   if(!work.items.length){
@@ -2030,6 +2039,7 @@ function renderWork(){
   work.items.forEach((it,ix)=>{
     it.dn=it.dn||[];
     const l=lastOf(it.name,work.id),c=document.createElement("div");c.className="exc";c.dataset.ix=ix;
+    const bsRaw=bestSession(it.name,work.id,it.unit),bs=bsRaw&&l&&bsRaw.sid===l.sid?l:bsRaw;
     const [w1,...wr]=String(it.w||"").split("+");const w2=wr.join("+");
     const hist=exHistory(it.name).filter(h=>h.sid!==work.id&&(h.unit||"kg")===(it.unit||"kg"));
     const maxW=hist.reduce((m,h)=>Math.max(m,wTotal(h.w)),0);
@@ -2037,15 +2047,15 @@ function renderWork(){
     const done=it.dn.filter(Boolean).length;
     c.innerHTML=`<div class="exh"><button class="ename" type="button" aria-label="История: ${esc(it.name)}">${esc(it.name)}${isPR?'<span class="pr">рекорд</span>':""}</button>
         <span class="exprog${done&&done>=it.sets.length?" all":""}">${done}/${it.sets.length}</span><button class="more" type="button" aria-label="Ещё" aria-expanded="${menuOpen===it.id}">⋯</button></div>
-      ${l?`<div class="exlast">Прошлый раз ${shortDate(l.date)}: <b>${l.w?fmtW(l.w)+" "+uName(l.unit):"без веса"} · ${l.sets.join(" ")}</b></div>`:`<div class="exlast">Первый раз — удачи!</div>`}
+      ${l?`<div class="exlast">Прошлый раз ${shortDate(l.date)}: <b>${l.w?fmtW(l.w)+" "+uName(l.unit):"без веса"} · ${l.sets.join(" ")}</b>${bs&&bs!==l?`<br><span class="bst">Рекорд ${shortDate(bs.date)}: <b>${bs.w?fmtW(bs.w)+" "+uName(bs.unit):"без веса"} · ${bs.sets.join(" ")}</b></span>`:bs?` <span class="bst">· это рекорд</span>`:""}</div>`:`<div class="exlast">Первый раз — удачи!</div>`}
       ${menuOpen===it.id?`<div class="exmenu"><button type="button" data-m="hist">История</button><button type="button" data-m="unit">${it.unit==="lb"?"В кг":"В lb"}</button><button type="button" data-m="rep"${l?"":" disabled"}>Как в прошлый раз</button><button type="button" data-m="up"${ix?"":" disabled"}>Выше</button><button type="button" data-m="down"${ix<work.items.length-1?"":" disabled"}>Ниже</button><button type="button" class="del" data-m="del">Удалить</button></div>`:""}
       <div class="wstep"><button class="stp" type="button" data-s="-1" aria-label="Меньше вес">−</button>
         <div class="wval"><input class="win" type="text" inputmode="decimal" value="${esc(w1)}" placeholder="${esc(l?String(l.w||"").split("+")[0]||"0":"0")}" aria-label="Вес">
           ${w2||it.x2?`<span class="wplus">+</span><input class="win x2" type="text" inputmode="decimal" value="${esc(w2)}" placeholder="доп." aria-label="Добавочный вес">`:""}
           <span class="wu">${uName(it.unit)}</span>${w2||it.x2?"":`<button class="addx" type="button" aria-label="Добавочный вес">+доп</button>`}</div>
         <button class="stp" type="button" data-s="1" aria-label="Больше вес">+</button></div>
-      <div class="sgrid"><div class="sgh"><span>№</span><span>Прошлый</span><span>Повторы</span><span></span></div>
-        ${it.sets.map((r,i)=>`<div class="sr${it.dn[i]?" done":""}" data-i="${i}"><span class="sn">${i+1}</span><span class="sp">${l&&l.sets[i]!=null?(l.w?fmtW(l.w)+" × ":"")+l.sets[i]:"—"}</span>
+      <div class="sgrid"><div class="sgh"><span>№</span><span>Прошлый</span><span class="bh">Рекорд</span><span>Повторы</span><span></span></div>
+        ${it.sets.map((r,i)=>`<div class="sr${it.dn[i]?" done":""}" data-i="${i}"><span class="sn">${i+1}</span><span class="sp">${cellOf(l,i)}</span><span class="sp sb">${cellOf(bs,i)}</span>
           <input class="sin" type="number" inputmode="numeric" min="0" value="${r>0?r:""}" placeholder="${l&&l.sets[i]!=null?l.sets[i]:""}" aria-label="Повторы, подход ${i+1}">
           <button class="sok" type="button" aria-pressed="${!!it.dn[i]}" aria-label="Подход ${i+1} выполнен">${CHECK}</button></div>`).join("")}</div>
       <div class="exact"><button type="button" data-a="add">+ Подход</button>${it.sets.length>1?`<button type="button" data-a="rm">− Подход</button>`:""}</div>`;
