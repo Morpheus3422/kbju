@@ -1173,7 +1173,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=35;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
+const APP_VERSION=36;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -2308,10 +2308,11 @@ function renderUnitSet(){$("gUnitSet").querySelectorAll("button").forEach(b=>b.s
 $("gUnitSet").querySelectorAll("button").forEach(b=>b.onclick=()=>{gym.unit=b.dataset.u;gym.ut=now();save();renderUnitSet()});
 renderUnitSet();
 /* программы «Верх A / Верх B» — составлены по тренировкам 19.10–06.11, добавляются один раз */
+const INCLINE_NOTE="Первым. Отдых 3 мин вместо прежних 2 — из-за короткого отдыха повторы падали 7·6·4. Если и с 3 мин в 3-м подходе меньше 6 — возьми 27.5. Сделаешь 3×10 — +2.5.";
 (function seedUpperAB(){
   const ex=(name,goal,w,rest,note,extra={})=>({name,unit:"kg",goal,w,rest,note,sets:+goal[0],...extra});
   const A={id:"seed-upper-a",name:"Верх A",at:1,t:Date.parse("2026-11-11T16:00:00Z"),ex:[
-    ex("Incline chest hammer","3 × 6–10","27.5",180,"Первым, отдых 3 мин. 27.5 вместо 30: было 7·6·4 четыре раза подряд. Сделаешь 3×10 — снова 30."),
+    ex("Incline chest hammer","3 × 6–10","30",180,INCLINE_NOTE),
     ex("Pulldown","3 × 8–12","58.5",120,"Было 8·7·7. Сделаешь 3×12 — +4.5."),
     ex("Chest press","3 × 8–12","30",120,"Жим в тренажёре горизонтально. 30 — стартовый ориентир: если 12 повторов легко, +5 со 2-го подхода."),
     ex("Row","3 × 8–12","49.5+4.5",120,"Было 10·10·8. Сделаешь 3×12 — +2.3."),
@@ -2329,6 +2330,10 @@ renderUnitSet();
     ex("Overhead triceps extension","2 × 10–12","12",60,"Гантель или канат из-за головы. 12 — ориентир.")]};
   let changed=false;
   [A,B].forEach(p=>{if(tomb[p.id]||gym.plans.some(x=>x.id===p.id||exKey(x.name)===exKey(p.name)))return;gym.plans.push(p);changed=true});
+  // уточнение 11.11: на жиме отдыхал 2 мин — оставляем 30 кг и увеличиваем отдых, если программа ещё не запускалась
+  const pa=gym.plans.find(x=>x.id==="seed-upper-a");
+  if(pa&&!pa.used){const e=pa.ex.find(x=>exKey(x.name)==="incline chest hammer");
+    if(e&&e.w==="27.5"){e.w="30";e.note=INCLINE_NOTE;e.rest=180;pa.t=Date.parse("2026-11-11T16:10:00Z");changed=true}}
   if(changed){try{localStorage.setItem("kbju-gym",JSON.stringify(gym))}catch(e){}}
 })();
 
