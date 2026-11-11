@@ -1173,7 +1173,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=36;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
+const APP_VERSION=37;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -2308,6 +2308,7 @@ function renderUnitSet(){$("gUnitSet").querySelectorAll("button").forEach(b=>b.s
 $("gUnitSet").querySelectorAll("button").forEach(b=>b.onclick=()=>{gym.unit=b.dataset.u;gym.ut=now();save();renderUnitSet()});
 renderUnitSet();
 /* программы «Верх A / Верх B» — составлены по тренировкам 19.10–06.11, добавляются один раз */
+const TRI_NOTE="Тренажёр сидя, ручки вниз. Сиденье: ручки на уровне груди. Корпус прямо, локти к телу, внизу почти выпрямить руки, вверх медленно. 40 — ориентир: если 15 легко, +5.";
 const INCLINE_NOTE="Первым. Отдых 3 мин вместо прежних 2 — из-за короткого отдыха повторы падали 7·6·4. Если и с 3 мин в 3-м подходе меньше 6 — возьми 27.5. Сделаешь 3×10 — +2.5.";
 (function seedUpperAB(){
   const ex=(name,goal,w,rest,note,extra={})=>({name,unit:"kg",goal,w,rest,note,sets:+goal[0],...extra});
@@ -2318,7 +2319,7 @@ const INCLINE_NOTE="Первым. Отдых 3 мин вместо прежни�
     ex("Row","3 × 8–12","49.5+4.5",120,"Было 10·10·8. Сделаешь 3×12 — +2.3."),
     ex("Lateral raise","3 × 12–15","6",60,"Махи гантелями в стороны, без раскачки. 6 кг — ориентир."),
     ex("Biceps","3 × 10–12","10",60,"Суперсет с трицепсом. С 12 кг повторы упали до 8·7·7 — вернись к 10, добей 3×12."),
-    ex("Triceps pushdown","3 × 10–15","20",60,"Разгибания на блоке с канатом, сразу после бицепса. 20 — ориентир.")]};
+    ex("Triceps press","3 × 10–15","40",60,TRI_NOTE)]};
   const B={id:"seed-upper-b",name:"Верх B",at:2,t:Date.parse("2026-11-11T16:00:00Z"),ex:[
     ex("Overhead press","3 × 6–10","22.5+6.8",150,"Было 10·10·8. Сделаешь 3×10 — +2.3."),
     ex("Row","3 × 8–12","49.5+4.5",120,"Сделаешь 3×12 — +2.3."),
@@ -2334,6 +2335,9 @@ const INCLINE_NOTE="Первым. Отдых 3 мин вместо прежни�
   const pa=gym.plans.find(x=>x.id==="seed-upper-a");
   if(pa&&!pa.used){const e=pa.ex.find(x=>exKey(x.name)==="incline chest hammer");
     if(e&&e.w==="27.5"){e.w="30";e.note=INCLINE_NOTE;e.rest=180;pa.t=Date.parse("2026-11-11T16:10:00Z");changed=true}}
+  // 11.11: вместо разгибаний на блоке — Triceps press
+  if(pa){const i=pa.ex.findIndex(x=>exKey(x.name)==="triceps pushdown");
+    if(i>=0){pa.ex[i]={name:"Triceps press",unit:"kg",goal:"3 × 10–15",w:"40",rest:60,note:TRI_NOTE,sets:3};pa.t=Math.max(pa.t||0,Date.parse("2026-11-11T16:30:00Z"));changed=true}}
   if(changed){try{localStorage.setItem("kbju-gym",JSON.stringify(gym))}catch(e){}}
 })();
 
