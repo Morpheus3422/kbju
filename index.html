@@ -386,7 +386,8 @@ details.pgroup>summary{cursor:pointer}
 .wval.pulse{animation:prpulse 1s ease-out 2}
 .wval .win{border:0;background:none;width:76px;text-align:right;font:700 22px var(--mono);padding:0;color:var(--fg)}
 .wval .win.x2{width:52px;text-align:left;font-size:17px}
-.wval .wu{font:600 13px var(--display);color:var(--muted)}
+.wval .wu{font:600 13px var(--display);color:var(--muted);display:flex;flex-direction:column;line-height:1.05;align-items:flex-start}
+.wval .wu small{font-size:10px;font-weight:600}
 .wval .wplus{font:600 15px var(--mono);color:var(--muted)}
 .wval .addx{border:0;background:var(--chip);color:var(--muted);border-radius:8px;font:700 11px var(--display);padding:4px 6px;cursor:pointer;white-space:nowrap}
 .sgrid{display:flex;flex-direction:column;gap:6px}
@@ -692,6 +693,7 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="panel">
       <h2>Зал</h2>
       <div class="mh"><span>Единицы веса по умолчанию</span><div class="seg" id="gUnitSet"><button type="button" data-u="kg">кг</button><button type="button" data-u="lb">lb</button></div></div>
+      <label class="hint" style="display:flex;flex-direction:column;gap:6px">Гантели в твоём зале, кг — кнопки «−/+» переключают по этому ряду<input id="gDbSet" class="search" inputmode="decimal" autocomplete="off" style="font-family:var(--mono);font-size:15px"></label>
       <div class="mh"><span>Отдых между подходами</span><div class="seg" id="gRestSet"><button type="button" data-r="0">выкл</button><button type="button" data-r="60">1:00</button><button type="button" data-r="90">1:30</button><button type="button" data-r="120">2:00</button><button type="button" data-r="180">3:00</button></div></div>
     </div>
     <div class="panel" id="remPanel">
@@ -1196,7 +1198,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=39;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
+const APP_VERSION=40;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -2067,6 +2069,13 @@ const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
 function workProgress(){let d=0,t=0;work.items.forEach(it=>{t+=it.sets.length;d+=(it.dn||[]).filter(Boolean).length});return [d,t]}
 function renderWorkMeta(){const [d,t]=workProgress();$("wProg").textContent=t?`${d}/${t} подходов`:"";}
 function newItem(name){const l=lastOf(name,work&&work.id);return {id:uid(),name,unit:l?.unit||gym.unit,w:l?.w||"",sets:Array(Math.max(3,l?.sets.length||0)).fill(null),dn:[]}}
+/* гантели: шаг веса идёт по реальному ряду гантелей в зале */
+const DB_DEFAULT=[2,4,5,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40];
+const DB_NAMES=new Set(["romanian deadlift","bulgarian split squat","lateral raise","biceps","overhead triceps extension","db bench press","incline db press","one-arm db row","hammer curl","rear delt db raise","lunges","step-up","goblet squat","db fly"]);
+const dbSet=()=>Array.isArray(gym.dbSet)&&gym.dbSet.length?gym.dbSet:DB_DEFAULT;
+function isDb(name){const k=exKey(name),m=gym.db||{};if(k in m)return !!m[k];return DB_NAMES.has(k)||/dumbbell|\bdb\b|гантел/i.test(name)}
+function setDb(name,v){gym.db={...(gym.db||{}),[exKey(name)]:v};gym.ut=now();save()}
+function dbStep(v,dir){const L=[...dbSet()].sort((a,b)=>a-b);if(dir>0){const n=L.find(x=>x>v+1e-9);return n??v}const p=[...L].reverse().find(x=>x<v-1e-9);return p??(L[0]<v?L[0]:v)}
 // лучшая тренировка по упражнению целиком: больше вес, при равном — больше повторов в сумме
 function bestSession(name,exceptId,unit){let best=null;const ref=exceptId?gym.sessions.find(x=>x.id===exceptId):null;
   exHistory(name).forEach(h=>{if(h.sid===exceptId||(h.unit||"kg")!==(unit||"kg")||!isBefore(h,ref))return;const W=wTotal(h.w),R=h.sets.reduce((a,b)=>a+b,0);
@@ -2085,7 +2094,7 @@ function renderWork(){
     it.dn=it.dn||[];
     const l=lastOf(it.name,work.id),c=document.createElement("div");c.className="exc";c.dataset.ix=ix;
     const bsRaw=bestSession(it.name,work.id,it.unit),bs=bsRaw&&l&&bsRaw.sid===l.sid?l:bsRaw;
-    const [w1,...wr]=String(it.w||"").split("+");const w2=wr.join("+");
+    const [w1,...wr]=String(it.w||"").split("+");const w2=wr.join("+");const db=isDb(it.name);
     const hist=exHistory(it.name).filter(h=>h.sid!==work.id&&(h.unit||"kg")===(it.unit||"kg")&&isBefore(h,work));
     const maxW=hist.reduce((m,h)=>Math.max(m,wTotal(h.w)),0);
     const isPR=maxW>0&&wTotal(it.w)>maxW;
@@ -2094,11 +2103,11 @@ function renderWork(){
         ${typeof exInfo==="function"&&exInfo(it.name)?`<button class="xinfo" type="button" aria-label="Как делать и замены">?</button>`:""}<span class="exprog${done&&done>=it.sets.length?" all":""}">${done}/${it.sets.length}</span><button class="more" type="button" aria-label="Ещё" aria-expanded="${menuOpen===it.id}">⋯</button></div>
       ${l?`<div class="exlast">Прошлый раз ${shortDate(l.date)}: <b>${l.w?fmtW(l.w)+" "+uName(l.unit):"без веса"} · ${l.sets.join(" ")}</b>${bs&&bs!==l?`<br><span class="bst">Рекорд ${shortDate(bs.date)}: <b>${bs.w?fmtW(bs.w)+" "+uName(bs.unit):"без веса"} · ${bs.sets.join(" ")}</b></span>`:bs?` <span class="bst">· это рекорд</span>`:""}</div>`:`<div class="exlast">Первый раз — удачи!</div>`}
       ${it.goal||it.note?`<div class="exgoal"><div>${it.goal?`<b>Цель ${esc(it.goal)}</b>`:""}${it.rest?` · отдых ${Math.floor(it.rest/60)}:${String(it.rest%60).padStart(2,"0")}`:""}</div>${it.note?`<span>${esc(it.note)}</span>`:""}</div>`:""}
-      ${menuOpen===it.id?`<div class="exmenu"><button type="button" data-m="info" class="wide2">Как делать · фото · замены</button><button type="button" data-m="hist">История</button><button type="button" data-m="unit">${it.unit==="lb"?"В кг":"В lb"}</button><button type="button" data-m="rep"${l?"":" disabled"}>Как в прошлый раз</button><button type="button" data-m="up"${ix?"":" disabled"}>Выше</button><button type="button" data-m="down"${ix<work.items.length-1?"":" disabled"}>Ниже</button><button type="button" class="del" data-m="del">Удалить</button></div>`:""}
+      ${menuOpen===it.id?`<div class="exmenu"><button type="button" data-m="info" class="wide2">Как делать · фото · замены</button><button type="button" data-m="hist">История</button><button type="button" data-m="unit">${it.unit==="lb"?"В кг":"В lb"}</button><button type="button" data-m="db">${db?"✓ Гантели":"Гантели"}</button><button type="button" data-m="rep"${l?"":" disabled"}>Как в прошлый раз</button><button type="button" data-m="up"${ix?"":" disabled"}>Выше</button><button type="button" data-m="down"${ix<work.items.length-1?"":" disabled"}>Ниже</button><button type="button" class="del" data-m="del">Удалить</button></div>`:""}
       <div class="wstep"><button class="stp" type="button" data-s="-1" aria-label="Меньше вес">−</button>
         <div class="wval"><input class="win" type="text" inputmode="decimal" value="${esc(w1)}" placeholder="${esc(l?String(l.w||"").split("+")[0]||"0":"0")}" aria-label="Вес">
           ${w2||it.x2?`<span class="wplus">+</span><input class="win x2" type="text" inputmode="decimal" value="${esc(w2)}" placeholder="доп." aria-label="Добавочный вес">`:""}
-          <span class="wu">${uName(it.unit)}</span>${w2||it.x2?"":`<button class="addx" type="button" aria-label="Добавочный вес">+доп</button>`}</div>
+          <span class="wu">${uName(it.unit)}${db?"<small>гантель</small>":""}</span>${w2||it.x2?"":`<button class="addx" type="button" aria-label="Добавочный вес">+доп</button>`}</div>
         <button class="stp" type="button" data-s="1" aria-label="Больше вес">+</button></div>
       <div class="sgrid"><div class="sgh"><span>№</span><span>Прошлый</span><span class="bh">Рекорд</span><span>Повторы</span><span></span></div>
         ${it.sets.map((r,i)=>`<div class="sr${it.dn[i]?" done":""}" data-i="${i}"><span class="sn">${i+1}</span><span class="sp">${cellOf(l,i)}</span><span class="sp sb">${cellOf(bs,i)}</span>
@@ -2113,6 +2122,7 @@ function renderWork(){
       if(m==="hist")return openExHistory(it.name);
       if(m==="info"){menuOpen=null;return openExInfo(it.name,ix)}
       if(m==="unit")it.unit=it.unit==="lb"?"kg":"lb";
+      if(m==="db"){setDb(it.name,!db);toast(!db?"Шаг веса — по гантелям в зале":"Шаг веса — 2,5 кг")}
       if(m==="rep"&&l){it.w=l.w;it.unit=l.unit||it.unit;it.sets=[...l.sets];it.dn=[]}
       if(m==="up"&&ix>0)[work.items[ix-1],work.items[ix]]=[work.items[ix],work.items[ix-1]];
       if(m==="down"&&ix<work.items.length-1)[work.items[ix+1],work.items[ix]]=[work.items[ix],work.items[ix+1]];
@@ -2125,8 +2135,9 @@ function renderWork(){
     const markW=pulse=>{const W=wTotal(it.w),up=hist.length>0&&W>0&&W>maxW;wv.classList.toggle("up",up);
       if(up&&pulse){wv.classList.remove("pulse");void wv.offsetWidth;wv.classList.add("pulse")}};
     wi.forEach(inp=>{inp.oninput=()=>{readW();upd()};inp.onchange=()=>{markW(true);markSets()}});
-    c.querySelectorAll(".stp").forEach(b=>b.onclick=()=>{const step=(it.unit==="lb"?5:2.5)*(+b.dataset.s);
-      let v=parseFloat((wi[0].value||wi[0].placeholder||"0").replace(",","."))||0;v=Math.max(0,Math.round((v+step)*100)/100);
+    c.querySelectorAll(".stp").forEach(b=>b.onclick=()=>{const dir=+b.dataset.s,step=(it.unit==="lb"?5:2.5)*dir;
+      let v=parseFloat((wi[0].value||wi[0].placeholder||"0").replace(",","."))||0;
+      v=db&&it.unit!=="lb"?dbStep(v,dir):Math.max(0,Math.round((v+step)*100)/100);
       wi[0].value=String(v);readW();upd();markW(true);markSets()});
     const ax=c.querySelector(".addx");if(ax)ax.onclick=()=>{it.x2=true;renderWork();const x=$("wList").querySelectorAll(".exc")[ix].querySelector(".win.x2");if(x)x.focus()};
     // подходы
@@ -2199,6 +2210,10 @@ function tickClock(){const el=$("wClock");if(!work){el.textContent="";return}
   if(work.dur&&work.fin){const m=Math.round(work.dur/60000);el.textContent=m?`${m} мин`:"";return}
   if(work.startAt&&work.date===todayKey()){const s=Math.floor((now()-work.startAt)/1000);el.textContent=`${Math.floor(s/3600)?Math.floor(s/3600)+":":""}${String(Math.floor(s/60)%60).padStart(Math.floor(s/3600)?2:1,"0")}:${String(s%60).padStart(2,"0")}`}else el.textContent=""}
 setInterval(()=>{if(openSheetEl&&openSheetEl.id==="sh-work"){tickClock();tickRest()}},500);
+function renderDbSet(){$("gDbSet").value=dbSet().map(x=>String(x).replace(".",",")).join("; ")}
+$("gDbSet").onchange=()=>{const L=[...new Set($("gDbSet").value.split(/[;\s]+/).map(x=>num(x)).filter(x=>x>0))].sort((a,b)=>a-b);
+  if(L.length<2){toast("Впиши хотя бы два веса через точку с запятой");renderDbSet();return}gym.dbSet=L;gym.ut=now();save();renderDbSet();toast("Ряд гантелей сохранён: "+L.length+" шт.")};
+renderDbSet();
 function renderRestSet(){$("gRestSet").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.r===(gym.rest??120)))}
 $("gRestSet").querySelectorAll("button").forEach(b=>b.onclick=()=>{gym.rest=+b.dataset.r;gym.ut=now();save();renderRestSet()});
 renderRestSet();
@@ -2459,7 +2474,7 @@ function mergeData(a,b){
   const mArr=(x,y)=>{const m=new Map();(x||[]).forEach(o=>m.set(o.id,o));(y||[]).forEach(o=>{const c=m.get(o.id);if(!c||(o.t||0)>(c.t||0))m.set(o.id,o)});return [...m.values()].filter(alive)};
   const A=a.gym||{},B=b.gym||{};
   const GY={plans:mArr(A.plans,B.plans).sort((x,y)=>(x.at||0)-(y.at||0)),sessions:mArr(A.sessions,B.sessions),
-    unit:((B.ut||0)>(A.ut||0)?B.unit:A.unit)||"kg",rest:((B.ut||0)>(A.ut||0)?B.rest:A.rest),ut:Math.max(A.ut||0,B.ut||0)};
+    unit:((B.ut||0)>(A.ut||0)?B.unit:A.unit)||"kg",rest:((B.ut||0)>(A.ut||0)?B.rest:A.rest),db:((B.ut||0)>(A.ut||0)?B.db:A.db),dbSet:((B.ut||0)>(A.ut||0)?B.dbSet:A.dbSet),ut:Math.max(A.ut||0,B.ut||0)};
   const PA=a.planner||{},PB=b.planner||{};
   const PL={tasks:mArr(PA.tasks,PB.tasks),lists:mArr(PA.lists,PB.lists).sort((x,y)=>(x.at||0)-(y.at||0))};
   return {app:"kbju",v:2,goals:G.k>0?G:GOAL,products:P,hist:H,tomb:T,gym:GY,planner:PL};
