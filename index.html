@@ -1173,7 +1173,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=37;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
+const APP_VERSION=38;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -2308,6 +2308,28 @@ function renderUnitSet(){$("gUnitSet").querySelectorAll("button").forEach(b=>b.s
 $("gUnitSet").querySelectorAll("button").forEach(b=>b.onclick=()=>{gym.unit=b.dataset.u;gym.ut=now();save();renderUnitSet()});
 renderUnitSet();
 /* программы «Верх A / Верх B» — составлены по тренировкам 19.10–06.11, добавляются один раз */
+/* программы «Низ A / Низ B» — составлены по тренировкам 17.10–09.11 */
+(function seedLowerAB(){
+  const ex=(name,goal,w,rest,note)=>({name,unit:"kg",goal,w,rest,note,sets:3});
+  const T=Date.parse("2026-11-13T15:40:00Z");
+  const A={id:"seed-lower-a",name:"Низ A",at:3,t:T,ex:[
+    ex("Leg press","3 × 8–12","80",150,"Новое базовое упражнение, первым. Стопы на ширине плеч, колени не сводить внутрь. 80 — ориентир: если 12 легко, +10."),
+    ex("Romanian deadlift","3 × 8–12","16",120,"Гантели, вес одной. Спина прямая, таз назад, гантели вдоль ног до середины голени. Растяжение в задней поверхности бедра."),
+    ex("Leg extension","3 × 10–15","58.5+4.5",90,"Было 10·10·10 на 58.5+2.3 — вес выше. Сделаешь 3×15 — снова +2.3."),
+    ex("Podjem v kolenyah zsadi","3 × 10–15","45",90,"Было 10·10·10 на 40 — вес выше. Вниз медленно."),
+    ex("Calf raises","3 × 12–15","76.8+2.3",60,"На 10 повторах застрял — работай до 12–15. Пауза 1 с вверху и внизу."),
+    ex("MTS crunch","3 × 10–15","40",60,"Выбери один вес и расти от него. Сделаешь 3×15 — +5.")]};
+  const B={id:"seed-lower-b",name:"Низ B",at:4,t:T,ex:[
+    ex("Hip thrust","3 × 8–12","40",150,"Ягодичный мост — штанга или тренажёр, первым. Вверху пауза 1 с, сжать ягодицы. 40 — ориентир."),
+    ex("Bulgarian split squat","3 × 8–12","10",120,"Гантели, вес одной. Задняя нога на скамье, повторы на каждую ногу. Если неудобно — замени на выпады."),
+    ex("Podjem v kolenyah zsadi","3 × 10–15","45",90,""),
+    ex("Hip abduction","3 × 12–15","58.5+4.5",60,"Было 10·10·10 на 58.5+2.3 — вес выше."),
+    ex("Hip adduction","3 × 12–15","67.5+6.8",60,"Было 10·10·8 — вес оставляем."),
+    ex("Calf raises","3 × 12–15","76.8+2.3",60,""),
+    ex("Hanging knee raise","3 × 10–15","",60,"Подъём коленей в висе на пресс. Без раскачки, вниз медленно.")]};
+  [A,B].forEach(p=>{if((typeof tomb!=="undefined"&&tomb[p.id])||gym.plans.some(x=>x.id===p.id||exKey(x.name)===exKey(p.name)))return;gym.plans.push(p);
+    try{localStorage.setItem("kbju-gym",JSON.stringify(gym))}catch(e){}});
+})();
 const TRI_NOTE="Тренажёр сидя, ручки вниз. Сиденье: ручки на уровне груди. Корпус прямо, локти к телу, внизу почти выпрямить руки, вверх медленно. 40 — ориентир: если 15 легко, +5.";
 const INCLINE_NOTE="Первым. Отдых 3 мин вместо прежних 2 — из-за короткого отдыха повторы падали 7·6·4. Если и с 3 мин в 3-м подходе меньше 6 — возьми 27.5. Сделаешь 3×10 — +2.5.";
 (function seedUpperAB(){
