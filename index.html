@@ -367,7 +367,7 @@ details.pgroup>summary{cursor:pointer}
 #wDone{padding:10px 14px;border-radius:999px}
 #wBody{padding-top:12px;padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
 .exc{border:1px solid var(--line);border-radius:16px;padding:12px 12px 10px;display:flex;flex-direction:column;gap:10px;background:var(--panel)}
-.exh{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}
+.exh{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;align-items:center}
 .exh .ename{border:0;background:none;text-align:left;font:800 17px var(--display);padding:0;cursor:pointer;color:var(--prot);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .exprog{font:600 12px var(--mono);color:var(--muted);background:var(--chip);border-radius:999px;padding:3px 8px}
 .exprog.all{background:var(--prot);color:#fff}
@@ -411,6 +411,19 @@ details.pgroup>summary{cursor:pointer}
 .exmenu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding-top:2px}
 .exmenu button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:9px 4px;font:600 12px var(--display);color:var(--fg);cursor:pointer}
 .exmenu button.del{color:var(--bad)}
+.exmenu .wide2{grid-column:1/-1;font-weight:700;color:var(--prot)}
+.xinfo{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--prot);font:800 14px var(--display);cursor:pointer}
+.xicard{background:var(--chip);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.xihow{font-size:15px;line-height:1.45}
+.xicard .btn{text-align:center;text-decoration:none}
+.xialts{display:flex;flex-direction:column;gap:8px}
+.xialt{border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--panel)}
+.xialt .t{display:flex;flex-direction:column;gap:3px;min-width:0}
+.xialt b{font-size:15px}
+.xialt span{font-size:13px;color:var(--muted);line-height:1.35}
+.xialt em{font-style:normal;font:500 12px var(--mono);color:var(--prot)}
+.xialt .b{display:flex;flex-direction:column;gap:6px}
+.xialt .btn{text-align:center;text-decoration:none}
 .addexbtn{height:54px;border-radius:16px;border:2px dashed var(--line);background:none;color:var(--prot);font:800 15px var(--display);cursor:pointer}
 .wempty{display:flex;flex-direction:column;gap:10px;padding:8px 0}
 .restbar{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:auto 1fr auto auto auto;gap:8px;align-items:center;background:var(--fg);color:var(--panel);border-radius:16px;padding:10px 10px 10px 14px;box-shadow:0 10px 28px rgba(0,0,0,.25);z-index:5}
@@ -939,12 +952,22 @@ input:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-vis
   </div>
 </div>
 
+<!-- SHEET: exercise info -->
+<div class="sheet full" id="sh-exinfo" hidden>
+  <div class="scrim"></div>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="xiTitle">
+    <div class="grab"><i></i></div>
+    <div class="sh"><b id="xiTitle">Упражнение</b><button class="x" data-close type="button" aria-label="Закрыть">×</button></div>
+    <div class="sbody" id="xiBody"></div>
+  </div>
+</div>
+
 <!-- SHEET: exercise history -->
 <div class="sheet" id="sh-exh" hidden>
   <div class="scrim"></div>
   <div class="box" role="dialog" aria-modal="true" aria-labelledby="xhTitle">
     <div class="grab"><i></i></div>
-    <div class="sh"><b id="xhTitle">Упражнение</b><button class="x" data-close type="button" aria-label="Закрыть">×</button></div>
+    <div class="sh"><b id="xhTitle">Упражнение</b><div class="dnav"><button class="ghost sm" id="xhInfo" type="button">Как делать</button><button class="x" data-close type="button" aria-label="Закрыть">×</button></div></div>
     <div class="sbody" id="xhBody"></div>
   </div>
 </div>
@@ -1173,7 +1196,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=38;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
+const APP_VERSION=39;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -2068,10 +2091,10 @@ function renderWork(){
     const isPR=maxW>0&&wTotal(it.w)>maxW;
     const done=it.dn.filter(Boolean).length;
     c.innerHTML=`<div class="exh"><button class="ename" type="button" aria-label="История: ${esc(it.name)}">${esc(it.name)}${isPR?'<span class="pr">рекорд</span>':""}</button>
-        <span class="exprog${done&&done>=it.sets.length?" all":""}">${done}/${it.sets.length}</span><button class="more" type="button" aria-label="Ещё" aria-expanded="${menuOpen===it.id}">⋯</button></div>
+        ${typeof exInfo==="function"&&exInfo(it.name)?`<button class="xinfo" type="button" aria-label="Как делать и замены">?</button>`:""}<span class="exprog${done&&done>=it.sets.length?" all":""}">${done}/${it.sets.length}</span><button class="more" type="button" aria-label="Ещё" aria-expanded="${menuOpen===it.id}">⋯</button></div>
       ${l?`<div class="exlast">Прошлый раз ${shortDate(l.date)}: <b>${l.w?fmtW(l.w)+" "+uName(l.unit):"без веса"} · ${l.sets.join(" ")}</b>${bs&&bs!==l?`<br><span class="bst">Рекорд ${shortDate(bs.date)}: <b>${bs.w?fmtW(bs.w)+" "+uName(bs.unit):"без веса"} · ${bs.sets.join(" ")}</b></span>`:bs?` <span class="bst">· это рекорд</span>`:""}</div>`:`<div class="exlast">Первый раз — удачи!</div>`}
       ${it.goal||it.note?`<div class="exgoal"><div>${it.goal?`<b>Цель ${esc(it.goal)}</b>`:""}${it.rest?` · отдых ${Math.floor(it.rest/60)}:${String(it.rest%60).padStart(2,"0")}`:""}</div>${it.note?`<span>${esc(it.note)}</span>`:""}</div>`:""}
-      ${menuOpen===it.id?`<div class="exmenu"><button type="button" data-m="hist">История</button><button type="button" data-m="unit">${it.unit==="lb"?"В кг":"В lb"}</button><button type="button" data-m="rep"${l?"":" disabled"}>Как в прошлый раз</button><button type="button" data-m="up"${ix?"":" disabled"}>Выше</button><button type="button" data-m="down"${ix<work.items.length-1?"":" disabled"}>Ниже</button><button type="button" class="del" data-m="del">Удалить</button></div>`:""}
+      ${menuOpen===it.id?`<div class="exmenu"><button type="button" data-m="info" class="wide2">Как делать · фото · замены</button><button type="button" data-m="hist">История</button><button type="button" data-m="unit">${it.unit==="lb"?"В кг":"В lb"}</button><button type="button" data-m="rep"${l?"":" disabled"}>Как в прошлый раз</button><button type="button" data-m="up"${ix?"":" disabled"}>Выше</button><button type="button" data-m="down"${ix<work.items.length-1?"":" disabled"}>Ниже</button><button type="button" class="del" data-m="del">Удалить</button></div>`:""}
       <div class="wstep"><button class="stp" type="button" data-s="-1" aria-label="Меньше вес">−</button>
         <div class="wval"><input class="win" type="text" inputmode="decimal" value="${esc(w1)}" placeholder="${esc(l?String(l.w||"").split("+")[0]||"0":"0")}" aria-label="Вес">
           ${w2||it.x2?`<span class="wplus">+</span><input class="win x2" type="text" inputmode="decimal" value="${esc(w2)}" placeholder="доп." aria-label="Добавочный вес">`:""}
@@ -2085,8 +2108,10 @@ function renderWork(){
     const upd=()=>{touch(work);gSaveSoon()};
     c.querySelector(".ename").onclick=()=>openExHistory(it.name);
     c.querySelector(".more").onclick=()=>{menuOpen=menuOpen===it.id?null:it.id;renderWork()};
+    const xi=c.querySelector(".xinfo");if(xi)xi.onclick=()=>openExInfo(it.name,ix);
     c.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{const m=b.dataset.m;
       if(m==="hist")return openExHistory(it.name);
+      if(m==="info"){menuOpen=null;return openExInfo(it.name,ix)}
       if(m==="unit")it.unit=it.unit==="lb"?"kg":"lb";
       if(m==="rep"&&l){it.w=l.w;it.unit=l.unit||it.unit;it.sets=[...l.sets];it.dn=[]}
       if(m==="up"&&ix>0)[work.items[ix-1],work.items[ix]]=[work.items[ix],work.items[ix-1]];
@@ -2210,6 +2235,7 @@ function openExHistory(name){
   const fromWork=!!(openSheetEl&&openSheetEl.id==="sh-work");
   if(fromWork)$("sh-exh").dataset.parent="sh-work";else delete $("sh-exh").dataset.parent;
   const h=exHistory(name);$("xhTitle").textContent=name;
+  $("xhInfo").hidden=!(typeof exInfo==="function"&&exInfo(name));$("xhInfo").onclick=()=>openExInfo(name,null);
   const B=$("xhBody");
   if(!h.length){B.innerHTML=`<div class="empty">Ещё нет записей по этому упражнению</div>`;openSheet("sh-exh");return}
   const pts=[...h].reverse(); // от старых к новым
@@ -2549,6 +2575,7 @@ if("serviceWorker" in navigator&&location.protocol!=="file:"){
   }).catch(()=>{});
 }
 </script>
+<script src="exinfo.js"></script>
 <script src="plan.js"></script>
 </body>
 </html>

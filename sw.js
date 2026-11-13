@@ -1,6 +1,6 @@
 // Офлайн-кэш: оболочка приложения и фото продуктов
-const VERSION = "kbju-v38";
-const SHELL = ["./", "./index.html", "./html5-qrcode.min.js", "./plan.js", "./plan-parse.js", "./manifest.webmanifest",
+const VERSION = "kbju-v39";
+const SHELL = ["./", "./index.html", "./html5-qrcode.min.js", "./plan.js", "./exinfo.js", "./plan-parse.js", "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
