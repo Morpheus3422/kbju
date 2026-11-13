@@ -1198,7 +1198,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=40;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
+const APP_VERSION=41;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -2349,6 +2349,8 @@ function renderUnitSet(){$("gUnitSet").querySelectorAll("button").forEach(b=>b.s
 $("gUnitSet").querySelectorAll("button").forEach(b=>b.onclick=()=>{gym.unit=b.dataset.u;gym.ut=now();save();renderUnitSet()});
 renderUnitSet();
 /* программы «Верх A / Верх B» — составлены по тренировкам 19.10–06.11, добавляются один раз */
+const BRUSYA_NOTE="Пресс на брусьях: колени к груди, таз чуть подкрутить вверх. Без раскачки, вниз медленно. Сделаешь 3×15 — прямые ноги или гантель между стоп.";
+const DBB_NOTE="Жим гантелей лёжа, вес одной. 14 — ориентир: сделаешь 3×12 — бери следующие гантели.";
 /* программы «Низ A / Низ B» — составлены по тренировкам 17.10–09.11 */
 (function seedLowerAB(){
   const ex=(name,goal,w,rest,note)=>({name,unit:"kg",goal,w,rest,note,sets:3});
@@ -2367,7 +2369,7 @@ renderUnitSet();
     ex("Hip abduction","3 × 12–15","58.5+4.5",60,"Было 10·10·10 на 58.5+2.3 — вес выше."),
     ex("Hip adduction","3 × 12–15","67.5+6.8",60,"Было 10·10·8 — вес оставляем."),
     ex("Calf raises","3 × 12–15","76.8+2.3",60,""),
-    ex("Hanging knee raise","3 × 10–15","",60,"Подъём коленей в висе на пресс. Без раскачки, вниз медленно.")]};
+    ex("brusya press","3 × 10–15","",60,BRUSYA_NOTE)]};
   [A,B].forEach(p=>{if((typeof tomb!=="undefined"&&tomb[p.id])||gym.plans.some(x=>x.id===p.id||exKey(x.name)===exKey(p.name)))return;gym.plans.push(p);
     try{localStorage.setItem("kbju-gym",JSON.stringify(gym))}catch(e){}});
 })();
@@ -2386,7 +2388,7 @@ const INCLINE_NOTE="Первым. Отдых 3 мин вместо прежни�
   const B={id:"seed-upper-b",name:"Верх B",at:2,t:Date.parse("2026-11-11T16:00:00Z"),ex:[
     ex("Overhead press","3 × 6–10","22.5+6.8",150,"Было 10·10·8. Сделаешь 3×10 — +2.3."),
     ex("Row","3 × 8–12","49.5+4.5",120,"Сделаешь 3×12 — +2.3."),
-    ex("brusya press","3 × 8–12","",120,"Свой вес. Когда 3×12 — добавь 5 кг на пояс."),
+    ex("DB bench press","3 × 8–12","14",120,DBB_NOTE),
     ex("Pulldown","3 × 8–12","58.5",120,""),
     ex("Pec deck","3 × 12–15","30",60,"Сведения в тренажёре «бабочка». 30 — ориентир, пауза 1 с в сведении."),
     ex("Rear delt","3 × 12–15","25",60,"Задняя дельта в тренажёре (обратная бабочка). 25 — ориентир."),
@@ -2401,6 +2403,14 @@ const INCLINE_NOTE="Первым. Отдых 3 мин вместо прежни�
   // 11.11: вместо разгибаний на блоке — Triceps press
   if(pa){const i=pa.ex.findIndex(x=>exKey(x.name)==="triceps pushdown");
     if(i>=0){pa.ex[i]={name:"Triceps press",unit:"kg",goal:"3 × 10–15",w:"40",rest:60,note:TRI_NOTE,sets:3};pa.t=Math.max(pa.t||0,Date.parse("2026-11-11T16:30:00Z"));changed=true}}
+  // 13.11: brusya press — это пресс на брусьях, а не отжимания: в Верх B — жим гантелей, в Низ B — brusya press
+  const T13=Date.parse("2026-11-13T16:50:00Z");
+  const pb=gym.plans.find(x=>x.id==="seed-upper-b");
+  if(pb&&(pb.t||0)<T13){const i=pb.ex.findIndex(x=>exKey(x.name)==="brusya press");
+    if(i>=0){pb.ex[i]={name:"DB bench press",unit:"kg",goal:"3 × 8–12",w:"14",rest:120,note:DBB_NOTE,sets:3};pb.t=T13;changed=true}}
+  const lb=gym.plans.find(x=>x.id==="seed-lower-b");
+  if(lb&&(lb.t||0)<T13){const i=lb.ex.findIndex(x=>exKey(x.name)==="hanging knee raise");
+    if(i>=0){lb.ex[i]={...lb.ex[i],name:"brusya press",note:BRUSYA_NOTE};lb.t=T13;changed=true}}
   if(changed){try{localStorage.setItem("kbju-gym",JSON.stringify(gym))}catch(e){}}
 })();
 

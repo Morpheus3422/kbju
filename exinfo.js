@@ -21,9 +21,10 @@ const EX_INFO=(()=>{
     A("Smith lunges","smith machine reverse lunge","Выпады в Смите — можно держаться за гриф.","20"),
     A("Step-up","dumbbell step up box","Шаг вверх на скамью или тумбу с гантелями.","10"),
     A("Single-leg press","single leg press machine","Жим ногами одной ногой — если колени не любят выпады.","40")]},
-  "hanging knee raise":{q:"captain's chair knee raise",how:"«Капитанский стул»: стойка с упорами под локти и спинкой. Висишь на локтях и поднимаешь колени к груди, без раскачки, вниз медленно.",alts:[
-    A("Hanging leg raise bar","hanging knee raise pull up bar","То же в висе на турнике — сложнее, держишься руками.",""),
+  "brusya press":{q:"captain's chair knee raise",how:"Пресс на брусьях («капитанский стул»): упор на предплечья, спина к спинке, ноги висят. Поднимаешь колени к груди и чуть подкручиваешь таз вверх — работает пресс, а не только бёдра. Без раскачки, вниз медленно. Когда 3×15 легко — прямые ноги или гантель между стоп.",alts:[
+    A("Hanging knee raise","hanging knee raise pull up bar","То же в висе на турнике — сложнее, держишься руками.",""),
     A("Reverse crunch","reverse crunch bench","Лёжа на скамье, поднимаешь таз и колени к груди.",""),
+    A("Cable crunch","cable crunch kneeling","Скручивания на коленях у верхнего блока с канатом.","30"),
     A("Plank","plank exercise","Планка 45–60 с вместо повторов.","")]},
   "incline chest hammer":{q:"hammer strength incline chest press",how:"Жимовой тренажёр на наклонной скамье, рычаги с дисками. Лопатки сведены, локти под ~45°, жмёшь вверх-вперёд.",alts:[
     A("Incline DB press","incline dumbbell press","Жим гантелей на наклонной скамье 30°. Вес одной гантели.","14"),
@@ -63,9 +64,10 @@ const EX_INFO=(()=>{
   "overhead triceps extension":{q:"overhead dumbbell triceps extension",how:"Разгибание рук из-за головы с гантелью или канатом, локти смотрят вверх.",alts:[
     A("Cable overhead extension","cable overhead triceps extension rope","То же на блоке с канатом.","15"),
     A("Skull crusher","ez bar skull crusher","Французский жим лёжа.","20")]},
-  "brusya press":{q:"parallel bar dips",how:"Отжимания на брусьях. Корпус чуть вперёд, опускаешься до угла 90° в локтях.",alts:[
-    A("Assisted dips","assisted dip machine","Брусья в гравитроне — если тяжело.",""),
-    A("Seated dip machine","seated dip machine","Тренажёр «отжимания сидя».","40")]},
+  "db bench press":{q:"dumbbell bench press",how:"Жим гантелей лёжа на горизонтальной скамье. Лопатки сведены, стопы в пол, локти под ~45°, гантели опускаешь до уровня груди. Вес одной гантели.",alts:[
+    A("Chest press","seated chest press machine","Жим в тренажёре сидя.","30"),
+    A("Smith bench press","smith machine bench press","Жим лёжа в Смите.","30"),
+    A("Dips","parallel bar dips chest","Отжимания на брусьях с наклоном корпуса вперёд.","")]},
   "leg extension":{q:"leg extension machine",how:"Разгибание ног сидя, валик на голени. Вверху пауза 1 с, вниз медленно.",alts:[
     A("Sissy squat","sissy squat","Сисси-присед — сложный, но без тренажёра.",""),
     A("Single-leg extension","single leg extension machine","Тот же тренажёр по одной ноге.","25")]},
@@ -85,7 +87,7 @@ const EX_INFO=(()=>{
     A("Smith calf raise","smith machine calf raise","Стоя в Смите на степе.","60")]},
   "mts crunch":{q:"ab crunch machine",how:"Скручивания в тренажёре: сгибаешь корпус, не тянешь руками, выдох в сокращении.",alts:[
     A("Cable crunch","cable crunch kneeling","Скручивания на коленях у верхнего блока с канатом.","30"),
-    A("Hanging knee raise","captain's chair knee raise","Подъём коленей в висе.","")]},
+    A("brusya press","captain's chair knee raise","Пресс на брусьях — подъём коленей в упоре.","")]},
   };
   // замены знают про своё основное упражнение и «соседей»
   Object.entries(D).forEach(([k,v])=>v.alts.forEach(a=>{const ak=a.name.toLowerCase();if(!D[ak])D[ak]={q:a.q,how:a.how,alts:[],of:k}}));
