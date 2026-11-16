@@ -1198,7 +1198,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=41;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
+const APP_VERSION=42;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -2071,7 +2071,7 @@ function renderWorkMeta(){const [d,t]=workProgress();$("wProg").textContent=t?`$
 function newItem(name){const l=lastOf(name,work&&work.id);return {id:uid(),name,unit:l?.unit||gym.unit,w:l?.w||"",sets:Array(Math.max(3,l?.sets.length||0)).fill(null),dn:[]}}
 /* гантели: шаг веса идёт по реальному ряду гантелей в зале */
 const DB_DEFAULT=[2,4,5,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40];
-const DB_NAMES=new Set(["romanian deadlift","bulgarian split squat","lateral raise","biceps","overhead triceps extension","db bench press","incline db press","one-arm db row","hammer curl","rear delt db raise","lunges","step-up","goblet squat","db fly"]);
+const DB_NAMES=new Set(["romanian deadlift","bulgarian split squat","lateral raise","biceps","overhead triceps extension","chest press","db bench press","incline db press","one-arm db row","hammer curl","rear delt db raise","lunges","step-up","goblet squat","db fly"]);
 const dbSet=()=>Array.isArray(gym.dbSet)&&gym.dbSet.length?gym.dbSet:DB_DEFAULT;
 function isDb(name){const k=exKey(name),m=gym.db||{};if(k in m)return !!m[k];return DB_NAMES.has(k)||/dumbbell|\bdb\b|гантел/i.test(name)}
 function setDb(name,v){gym.db={...(gym.db||{}),[exKey(name)]:v};gym.ut=now();save()}
@@ -2350,7 +2350,7 @@ $("gUnitSet").querySelectorAll("button").forEach(b=>b.onclick=()=>{gym.unit=b.da
 renderUnitSet();
 /* программы «Верх A / Верх B» — составлены по тренировкам 19.10–06.11, добавляются один раз */
 const BRUSYA_NOTE="Пресс на брусьях: колени к груди, таз чуть подкрутить вверх. Без раскачки, вниз медленно. Сделаешь 3×15 — прямые ноги или гантель между стоп.";
-const DBB_NOTE="Жим гантелей лёжа, вес одной. 14 — ориентир: сделаешь 3×12 — бери следующие гантели.";
+const DBB_NOTE="Жим гантелей лёжа на горизонтальной скамье, вес одной гантели. 14 — ориентир: сделаешь 3×12 — бери следующие гантели.";
 /* программы «Низ A / Низ B» — составлены по тренировкам 17.10–09.11 */
 (function seedLowerAB(){
   const ex=(name,goal,w,rest,note)=>({name,unit:"kg",goal,w,rest,note,sets:3});
@@ -2380,7 +2380,7 @@ const INCLINE_NOTE="Первым. Отдых 3 мин вместо прежни�
   const A={id:"seed-upper-a",name:"Верх A",at:1,t:Date.parse("2026-11-11T16:00:00Z"),ex:[
     ex("Incline chest hammer","3 × 6–10","30",180,INCLINE_NOTE),
     ex("Pulldown","3 × 8–12","58.5",120,"Было 8·7·7. Сделаешь 3×12 — +4.5."),
-    ex("Chest press","3 × 8–12","30",120,"Жим в тренажёре горизонтально. 30 — стартовый ориентир: если 12 повторов легко, +5 со 2-го подхода."),
+    ex("Chest press","3 × 8–12","14",120,DBB_NOTE),
     ex("Row","3 × 8–12","49.5+4.5",120,"Было 10·10·8. Сделаешь 3×12 — +2.3."),
     ex("Lateral raise","3 × 12–15","6",60,"Махи гантелями в стороны, без раскачки. 6 кг — ориентир."),
     ex("Biceps","3 × 10–12","10",60,"Суперсет с трицепсом. С 12 кг повторы упали до 8·7·7 — вернись к 10, добей 3×12."),
@@ -2388,7 +2388,7 @@ const INCLINE_NOTE="Первым. Отдых 3 мин вместо прежни�
   const B={id:"seed-upper-b",name:"Верх B",at:2,t:Date.parse("2026-11-11T16:00:00Z"),ex:[
     ex("Overhead press","3 × 6–10","22.5+6.8",150,"Было 10·10·8. Сделаешь 3×10 — +2.3."),
     ex("Row","3 × 8–12","49.5+4.5",120,"Сделаешь 3×12 — +2.3."),
-    ex("DB bench press","3 × 8–12","14",120,DBB_NOTE),
+    ex("Chest press","3 × 8–12","14",120,DBB_NOTE),
     ex("Pulldown","3 × 8–12","58.5",120,""),
     ex("Pec deck","3 × 12–15","30",60,"Сведения в тренажёре «бабочка». 30 — ориентир, пауза 1 с в сведении."),
     ex("Rear delt","3 × 12–15","25",60,"Задняя дельта в тренажёре (обратная бабочка). 25 — ориентир."),
@@ -2407,10 +2407,17 @@ const INCLINE_NOTE="Первым. Отдых 3 мин вместо прежни�
   const T13=Date.parse("2026-11-13T16:50:00Z");
   const pb=gym.plans.find(x=>x.id==="seed-upper-b");
   if(pb&&(pb.t||0)<T13){const i=pb.ex.findIndex(x=>exKey(x.name)==="brusya press");
-    if(i>=0){pb.ex[i]={name:"DB bench press",unit:"kg",goal:"3 × 8–12",w:"14",rest:120,note:DBB_NOTE,sets:3};pb.t=T13;changed=true}}
+    if(i>=0){pb.ex[i]={name:"Chest press",unit:"kg",goal:"3 × 8–12",w:"14",rest:120,note:DBB_NOTE,sets:3};pb.t=T13;changed=true}}
   const lb=gym.plans.find(x=>x.id==="seed-lower-b");
   if(lb&&(lb.t||0)<T13){const i=lb.ex.findIndex(x=>exKey(x.name)==="hanging knee raise");
     if(i>=0){lb.ex[i]={...lb.ex[i],name:"brusya press",note:BRUSYA_NOTE};lb.t=T13;changed=true}}
+  // 16.11: Chest press у тебя — это жим гантелей лёжа; одно упражнение в A и B, общая история
+  const T16=Date.parse("2026-11-16T17:05:00Z");
+  [pa,pb].forEach(p=>{if(!p||(p.t||0)>=T16)return;let ch=false;
+    p.ex.forEach((e,i)=>{const k=exKey(e.name);
+      if(k==="db bench press"){p.ex[i]={...e,name:"Chest press",note:DBB_NOTE};ch=true}
+      else if(k==="chest press"&&e.note!==DBB_NOTE){p.ex[i]={...e,note:DBB_NOTE,w:p.used?e.w:"14"};ch=true}});
+    if(ch){p.t=T16;changed=true}});
   if(changed){try{localStorage.setItem("kbju-gym",JSON.stringify(gym))}catch(e){}}
 })();
 

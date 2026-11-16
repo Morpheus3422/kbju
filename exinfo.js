@@ -30,9 +30,10 @@ const EX_INFO=(()=>{
     A("Incline DB press","incline dumbbell press","Жим гантелей на наклонной скамье 30°. Вес одной гантели.","14"),
     A("Incline Smith press","incline smith machine bench press","Жим в Смите на наклонной скамье.","30"),
     A("Incline machine press","incline chest press machine","Любой другой наклонный жимовой тренажёр.","30")]},
-  "chest press":{q:"seated chest press machine",how:"Жимовой тренажёр сидя, ручки на уровне середины груди. Жмёшь вперёд, локти не выше плеч.",alts:[
-    A("DB bench press","dumbbell bench press","Жим гантелей лёжа. Вес одной гантели.","14"),
-    A("Bench press","barbell bench press","Жим штанги лёжа.","40"),
+  "chest press":{q:"dumbbell bench press",how:"Жим гантелей лёжа на горизонтальной скамье. Лопатки сведены, стопы в пол, локти под ~45°, гантели опускаешь до уровня груди. Вес одной гантели.",alts:[
+    A("Machine chest press","seated chest press machine","Жимовой тренажёр сидя — если скамьи заняты.","30"),
+    A("Smith bench press","smith machine bench press","Жим лёжа в Смите.","30"),
+    A("Dips","parallel bar dips chest","Отжимания на брусьях с наклоном корпуса вперёд.",""),
     A("Push-ups","push ups","Отжимания от пола, можно с весом на спине.","")]},
   "pec deck":{q:"pec deck fly machine",how:"«Бабочка»: сидя, руки на рукоятках или подушках, сводишь их перед грудью. Пауза 1 с в сведении.",alts:[
     A("Cable fly","cable crossover chest fly","Сведения в кроссовере стоя.","10"),
@@ -64,10 +65,6 @@ const EX_INFO=(()=>{
   "overhead triceps extension":{q:"overhead dumbbell triceps extension",how:"Разгибание рук из-за головы с гантелью или канатом, локти смотрят вверх.",alts:[
     A("Cable overhead extension","cable overhead triceps extension rope","То же на блоке с канатом.","15"),
     A("Skull crusher","ez bar skull crusher","Французский жим лёжа.","20")]},
-  "db bench press":{q:"dumbbell bench press",how:"Жим гантелей лёжа на горизонтальной скамье. Лопатки сведены, стопы в пол, локти под ~45°, гантели опускаешь до уровня груди. Вес одной гантели.",alts:[
-    A("Chest press","seated chest press machine","Жим в тренажёре сидя.","30"),
-    A("Smith bench press","smith machine bench press","Жим лёжа в Смите.","30"),
-    A("Dips","parallel bar dips chest","Отжимания на брусьях с наклоном корпуса вперёд.","")]},
   "leg extension":{q:"leg extension machine",how:"Разгибание ног сидя, валик на голени. Вверху пауза 1 с, вниз медленно.",alts:[
     A("Sissy squat","sissy squat","Сисси-присед — сложный, но без тренажёра.",""),
     A("Single-leg extension","single leg extension machine","Тот же тренажёр по одной ноге.","25")]},
