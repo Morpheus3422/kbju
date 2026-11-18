@@ -7,6 +7,14 @@ const EX_INFO=(()=>{
     A("Smith squat","smith machine squat","Присед со штангой на направляющих, стопы чуть впереди.","40"),
     A("Seated leg press","seated horizontal leg press machine","Жим ногами сидя, платформа перед тобой.","70"),
     A("Goblet squat","dumbbell goblet squat","Присед с одной гантелью у груди — если всё занято.","20")]},
+  "hack squat":{q:"hack squat machine",how:"Тренажёр для приседа: стоишь спиной к наклонной подушке, упоры на плечах, стопы на платформе на ширине плеч чуть впереди. Приседаешь до бедра параллельно платформе, колени по линии стоп, поясница прижата.",alts:[
+    A("Pendulum squat","pendulum squat machine","Маятниковый присед — тоже тренажёр, ещё мягче для спины.","20"),
+    A("Single-leg press","single leg press machine","Жим ногами одной ногой.","40"),
+    A("Leg press","45 degree leg press machine","Жим ногами, ноги чуть ниже на платформе — больше квадрицепс.","80")]},
+  "glute kickback machine":{q:"glute kickback machine",how:"Тренажёр для отведения ноги назад: упор грудью или руками, стопа на платформе или валик под коленом. Отводишь ногу назад-вверх ягодицей, не прогибая поясницу. Повторы на каждую ногу.",alts:[
+    A("Cable kickback","cable glute kickback","Отведение ноги назад в кроссовере с манжетой.","10"),
+    A("Hip thrust","hip thrust machine","Ягодичный мост в тренажёре.","40"),
+    A("Hip abduction","hip abduction machine","Разведение ног сидя, корпус наклонить вперёд — больше ягодица.","58.5")]},
   "hip thrust":{q:"hip thrust machine",how:"Сидишь спиной на подушке, ремень или валик на тазу, выталкиваешь таз вверх до прямой линии корпуса. Вверху пауза 1 с, сжать ягодицы.",alts:[
     A("Barbell hip thrust","barbell hip thrust bench","Лопатки на скамье, штанга с мягкой накладкой на тазу.","40"),
     A("Smith hip thrust","smith machine hip thrust","То же в Смите — штанга не скатывается, удобнее ставить.","40"),

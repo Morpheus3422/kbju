@@ -1198,7 +1198,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab)
   ["gesturestart","gesturechange","gestureend"].forEach(ev=>{window.addEventListener(ev,stop,opt);document.addEventListener(ev,stop,opt)});
   const multi=e=>{if(e.touches&&e.touches.length>1)e.preventDefault()};
   window.addEventListener("touchstart",multi,opt);window.addEventListener("touchmove",e=>{if((e.touches&&e.touches.length>1)||(e.scale&&e.scale!==1))e.preventDefault()},opt);}
-const APP_VERSION=42;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
+const APP_VERSION=43;try{document.getElementById("appVer").textContent="Ascend · версия "+APP_VERSION}catch(e){}
 /* ---------- sheets ---------- */
 // iOS не уменьшает экран под клавиатуру: поднимаем шторку на высоту клавиатуры
 (()=>{const vv=window.visualViewport;if(!vv)return;
@@ -2351,20 +2351,23 @@ renderUnitSet();
 /* программы «Верх A / Верх B» — составлены по тренировкам 19.10–06.11, добавляются один раз */
 const BRUSYA_NOTE="Пресс на брусьях: колени к груди, таз чуть подкрутить вверх. Без раскачки, вниз медленно. Сделаешь 3×15 — прямые ноги или гантель между стоп.";
 const DBB_NOTE="Жим гантелей лёжа на горизонтальной скамье, вес одной гантели. 14 — ориентир: сделаешь 3×12 — бери следующие гантели.";
+const KICK_NOTE="Тренажёр, повторы на каждую ногу. Вместо румынской тяги — ягодицы без нагрузки на поясницу. Начни с лёгкого веса, вверху пауза 1 с.";
+const HACK_NOTE="Гакк-присед в тренажёре, первым. Вес — только диски, без салазок. 20 — для пробы: если 12 легко, +10. Поясница прижата к подушке.";
+const HIP_NOTE="Ягодичный мост в тренажёре. Вверху пауза 1 с, сжать ягодицы. 40 — ориентир. Нет тренажёра — Glute kickback machine.";
 /* программы «Низ A / Низ B» — составлены по тренировкам 17.10–09.11 */
 (function seedLowerAB(){
   const ex=(name,goal,w,rest,note)=>({name,unit:"kg",goal,w,rest,note,sets:3});
   const T=Date.parse("2026-11-13T15:40:00Z");
   const A={id:"seed-lower-a",name:"Низ A",at:3,t:T,ex:[
     ex("Leg press","3 × 8–12","80",150,"Новое базовое упражнение, первым. Стопы на ширине плеч, колени не сводить внутрь. 80 — ориентир: если 12 легко, +10."),
-    ex("Romanian deadlift","3 × 8–12","16",120,"Гантели, вес одной. Спина прямая, таз назад, гантели вдоль ног до середины голени. Растяжение в задней поверхности бедра."),
     ex("Leg extension","3 × 10–15","58.5+4.5",90,"Было 10·10·10 на 58.5+2.3 — вес выше. Сделаешь 3×15 — снова +2.3."),
     ex("Podjem v kolenyah zsadi","3 × 10–15","45",90,"Было 10·10·10 на 40 — вес выше. Вниз медленно."),
+    ex("Glute kickback machine","3 × 10–15","",60,KICK_NOTE),
     ex("Calf raises","3 × 12–15","76.8+2.3",60,"На 10 повторах застрял — работай до 12–15. Пауза 1 с вверху и внизу."),
     ex("MTS crunch","3 × 10–15","40",60,"Выбери один вес и расти от него. Сделаешь 3×15 — +5.")]};
   const B={id:"seed-lower-b",name:"Низ B",at:4,t:T,ex:[
-    ex("Hip thrust","3 × 8–12","40",150,"Ягодичный мост — штанга или тренажёр, первым. Вверху пауза 1 с, сжать ягодицы. 40 — ориентир."),
-    ex("Bulgarian split squat","3 × 8–12","10",120,"Гантели, вес одной. Задняя нога на скамье, повторы на каждую ногу. Если неудобно — замени на выпады."),
+    ex("Hack squat","3 × 8–12","20",150,HACK_NOTE),
+    ex("Hip thrust","3 × 8–12","40",120,HIP_NOTE),
     ex("Podjem v kolenyah zsadi","3 × 10–15","45",90,""),
     ex("Hip abduction","3 × 12–15","58.5+4.5",60,"Было 10·10·10 на 58.5+2.3 — вес выше."),
     ex("Hip adduction","3 × 12–15","67.5+6.8",60,"Было 10·10·8 — вес оставляем."),
@@ -2418,6 +2421,16 @@ const INCLINE_NOTE="Первым. Отдых 3 мин вместо прежни�
       if(k==="db bench press"){p.ex[i]={...e,name:"Chest press",note:DBB_NOTE};ch=true}
       else if(k==="chest press"&&e.note!==DBB_NOTE){p.ex[i]={...e,note:DBB_NOTE,w:p.used?e.w:"14"};ch=true}});
     if(ch){p.t=T16;changed=true}});
+  // 18.11: ноги — только тренажёры: RDL → отведение ноги в тренажёре, болгарские → гакк-присед
+  const T18=Date.parse("2026-11-18T16:35:00Z");
+  const la=gym.plans.find(x=>x.id==="seed-lower-a");
+  if(la&&(la.t||0)<T18){const i=la.ex.findIndex(x=>exKey(x.name)==="romanian deadlift");
+    if(i>=0){la.ex.splice(i,1);const j=la.ex.findIndex(x=>exKey(x.name)==="podjem v kolenyah zsadi");
+      la.ex.splice(j>=0?j+1:i,0,{name:"Glute kickback machine",unit:"kg",goal:"3 × 10–15",w:"",rest:60,note:KICK_NOTE,sets:3});la.t=T18;changed=true}}
+  if(lb&&(lb.t||0)<T18){const i=lb.ex.findIndex(x=>exKey(x.name)==="bulgarian split squat");
+    if(i>=0){lb.ex.splice(i,1);lb.ex.unshift({name:"Hack squat",unit:"kg",goal:"3 × 8–12",w:"20",rest:150,note:HACK_NOTE,sets:3});
+      const h=lb.ex.find(x=>exKey(x.name)==="hip thrust");if(h){h.note=HIP_NOTE;h.rest=120}
+      lb.t=T18;changed=true}}
   if(changed){try{localStorage.setItem("kbju-gym",JSON.stringify(gym))}catch(e){}}
 })();
 
